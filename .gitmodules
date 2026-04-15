@@ -1,0 +1,3 @@
+[submodule "services/game-service"]
+	path = services/game-service
+	url = https://github.com/nanafilbert/devops-trivia.git
