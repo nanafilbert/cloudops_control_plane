@@ -1,8 +1,7 @@
 name: "FinOps Reporter"
 
 on:
-  push:
-    branches: [main]
+  
   schedule:
     - cron: '0 0 1 * *'   # 1st day of every month at midnight UTC
   workflow_dispatch:
