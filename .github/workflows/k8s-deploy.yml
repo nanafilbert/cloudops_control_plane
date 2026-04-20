@@ -1,0 +1,76 @@
+name: "Kubernetes Deploy"
+
+on:
+  workflow_run:
+    workflows: ["Docker Build & Push"]
+    types:
+      - completed
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      ENV: dev  # Could be parameterized later
+      CLUSTER_NAME: cloudops-dev
+      REGION: us-east-1
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.REGION }}
+
+      # Apply Kustomize base + overlay (namespaces, network policies, HPA)
+      - name: Apply Kustomize overlays
+        run: |
+          kubectl apply -k kubernetes/overlays/${{ env.ENV }}
+
+      # Deploy Helm charts for all services using matrix
+      - name: Deploy Helm charts
+        run: |
+          for service in auth-service user-service game-service; do
+            helm upgrade --install $service ./helm/$service \
+              --namespace game-${{ env.ENV }} \
+              --set image.tag=${{ github.event.workflow_run.head_sha }} \
+              -f configs/${{ env.ENV }}/values-$service.yaml \
+              --wait
+          done
+
+      # Install monitoring stack (idempotent)
+      - name: Deploy monitoring stack
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+          helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+            --namespace monitoring --create-namespace \
+            -f kubernetes/monitoring/prometheus-values.yaml \
+            --wait
+          helm upgrade --install loki grafana/loki-stack \
+            --namespace logging --create-namespace \
+            -f kubernetes/monitoring/loki-values.yaml \
+            --wait
+          kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
+          kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
+
+      # Post-deployment health check for each service
+      - name: Health check
+        run: |
+          for service in auth-service user-service game-service; do
+            echo "Checking $service..."
+            kubectl wait --for=condition=ready pod -l app=$service -n game-${{ env.ENV }} --timeout=120s
+          done

@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-service-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  game-service-dashboard.json: |
+    {
+      "title": "Game Service - Production Overview",
+      "uid": "game-service-prod",
+      "timezone": "utc",
+      "editable": true,
+      "refresh": "30s",
+      "panels": [
+        {
+          "title": "Request Rate (ops/s)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            { "expr": "sum(rate(http_requests_total{service=\"game-service\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_requests_total{service=\"game-service\", status=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_requests_total{service=\"game-service\", status=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ]
+        },
+        {
+          "title": "Error Rate (5xx %)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{service=\"game-service\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{service=\"game-service\"}[1m])) * 100",
+              "legendFormat": "Error %"
+            }
+          ]
+        },
+        {
+          "title": "P99 Latency (seconds)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"game-service\"}[5m])) by (le))",
+              "legendFormat": "P99"
+            }
+          ]
+        },
+        {
+          "title": "Active Pods",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "count(kube_pod_info{namespace=\"game-prod\", pod=~\"game-service-.*\"})",
+              "legendFormat": "Pods"
+            }
+          ]
+        },
+        {
+          "title": "CPU Usage (cores)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 12 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"game-prod\", pod=~\"game-service-.*\"}[5m]))",
+              "legendFormat": "CPU"
+            }
+          ]
+        },
+        {
+          "title": "Memory Usage (GB)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 12 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"game-prod\", pod=~\"game-service-.*\"}) / 1024^3",
+              "legendFormat": "Memory"
+            }
+          ]
+        },
+        {
+          "title": "WebSocket Connections",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 12 },
+          "targets": [
+            {
+              "expr": "django_websocket_connections_total",
+              "legendFormat": "Active WS"
+            }
+          ]
+        },
+        {
+          "title": "PostgreSQL Connections",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 20 },
+          "targets": [
+            {
+              "expr": "pg_stat_database_numbackends{datname=\"game_db\"}",
+              "legendFormat": "DB connections"
+            }
+          ]
+        },
+        {
+          "title": "Active Game Sessions",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 28 },
+          "targets": [
+            {
+              "expr": "game_sessions_active",
+              "legendFormat": "Sessions"
+            }
+          ]
+        },
+        {
+          "title": "Score Updates (per minute)",
+          "type": "graph",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+          "targets": [
+            {
+              "expr": "rate(game_score_updates_total[1m])",
+              "legendFormat": "Score updates"
+            }
+          ]
+        }
+      ]
+    }

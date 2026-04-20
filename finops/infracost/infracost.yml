@@ -1,0 +1,20 @@
+# Infracost configuration for cloudops_control_plane
+version: 0.1
+
+projects:
+  - path: terraform/environments/dev
+    name: cloudops-dev
+    terraform_var_files:
+      - terraform.tfvars
+    usage:
+      # Default usage for demo (keeps estimates low)
+      aws_nat_gateway:
+        monthly_data_processed_gb: 5
+      aws_eks_node_group:
+        monthly_cpu_hours: 720   # 1 node * 24h * 30d
+        monthly_memory_gb_hours: 1440  # 2GB RAM * 720h
+      aws_db_instance:
+        monthly_io_requests: 1_000_000
+
+# Optional: enable cost breakdown by resource
+no_retrospective: true

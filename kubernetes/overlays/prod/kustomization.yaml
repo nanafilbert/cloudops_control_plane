@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: game-prod
+
+resources:
+  - ../../base
+
+# Prod may need higher HPA minReplicas or different limits
+patches:
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: game-service-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 2

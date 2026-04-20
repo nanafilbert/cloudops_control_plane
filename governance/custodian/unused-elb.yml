@@ -1,0 +1,13 @@
+# governance/custodian/unused-elb.yml
+policies:
+  - name: elb-unused
+    resource: elb
+    description: |
+      Delete Classic Load Balancers that have no registered instances.
+    filters:
+      - type: value
+        key: Instances
+        value: []
+      - tag:Environment: demo
+    actions:
+      - delete

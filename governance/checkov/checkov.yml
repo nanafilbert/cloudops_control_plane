@@ -1,0 +1,28 @@
+# governance/checkov/checkov.yml
+# Checkov configuration for Terraform and Kubernetes scanning
+
+# Skip checks that are not relevant for this demo
+skip-check:
+  - CKV_AWS_18   # Ensure S3 bucket has logging enabled (demo bucket)
+  - CKV_AWS_23   # Ensure EBS volumes are encrypted (demo RDS uses encryption)
+  - CKV_K8S_41   # Ensure default namespace not used (we use explicit namespaces)
+
+# Soft fail – do not block PRs on low severity issues
+soft-fail: true
+
+# Output format
+output: cli
+
+# Only scan certain directories
+directory:
+  - terraform/modules
+  - kubernetes/base
+
+# Set severity thresholds (only fail on CRITICAL)
+check:
+  - CKV_AWS_123  # Ensure RDS backup retention period is set (we have 7 days)
+
+# Exclude paths
+skip-path:
+  - terraform/env/dev/.terraform
+  - kubernetes/overlays

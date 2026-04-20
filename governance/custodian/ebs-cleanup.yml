@@ -1,0 +1,16 @@
+# governance/custodian/ebs-cleanup.yml
+policies:
+  - name: ebs-unattached-cleanup
+    resource: ebs
+    description: |
+      Delete unattached EBS volumes that are older than 7 days.
+    filters:
+      - type: value
+        key: State
+        value: available
+      - type: age
+        days: 7
+        op: ge
+      - tag:Environment: demo   # Only clean up demo environment volumes
+    actions:
+      - delete

@@ -1,0 +1,38 @@
+# Overrides for user-service Helm chart (dev environment)
+
+replicaCount: 1
+
+image:
+  repository: ${ECR_REGISTRY}/user-service
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  host: user.dev.yourdomain.com
+  path: /
+  pathType: Prefix
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+env:
+  - name: DB_SECRET_NAME
+    value: "cloudops/game-db"
+  - name: DB_REGION
+    value: "us-east-1"
+  - name: LOG_LEVEL
+    value: "debug"
+
+autoscaling:
+  enabled: false

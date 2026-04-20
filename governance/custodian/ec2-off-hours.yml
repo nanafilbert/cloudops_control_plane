@@ -1,0 +1,15 @@
+# governance/custodian/ec2-off-hours.yml
+policies:
+  - name: ec2-off-hours-stop
+    resource: ec2
+    description: |
+      Stop EC2 instances during off-hours (weekends and 8pm-6am) to reduce cost.
+    filters:
+      - type: offhours
+        offhour: 20                 # 8 PM
+        onhour: 6                   # 6 AM
+        weekends: true
+        default_tz: utc
+      - tag:Environment: demo
+    actions:
+      - stop

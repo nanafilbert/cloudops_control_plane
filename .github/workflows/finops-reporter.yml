@@ -1,0 +1,44 @@
+name: "FinOps Reporter"
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 1 * *'   # 1st day of every month at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write   # if you want to auto-commit the report
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Run cost report
+        run: python3 finops/automation/automation-cost-report.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: finops-reports
+          path: |
+            cost-report.json
+            finops/reports/monthly.md
+
+      # Optional: auto-commit the monthly.md back to repo
+      - name: Commit monthly report
+        if: github.event_name == 'schedule'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add finops/reports/monthly.md
+          git commit -m "chore: auto-update monthly FinOps report" || echo "No changes"
+          git push
