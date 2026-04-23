@@ -44,6 +44,7 @@ jobs:
     needs: test-game-service
     env:
       TF_WORKING_DIR: 'terraform/environments/dev'
+      TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
     steps:
       - uses: actions/checkout@v4
 
