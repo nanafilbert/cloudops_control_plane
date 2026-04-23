@@ -103,3 +103,5 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
+
+            # Optionally, you could also create a check run with the plan output instead of a comment for better visibility in the PR checks tab.
