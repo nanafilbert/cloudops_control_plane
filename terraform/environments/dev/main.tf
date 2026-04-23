@@ -32,7 +32,7 @@ module "eks" {
   source = "../../modules/eks"
 
   cluster_name        = "cloudops-dev"
-  cluster_version     = "1.31"
+  cluster_version     = "1.29"
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
 
@@ -62,7 +62,7 @@ module "rds" {
   source = "../../modules/rds"
 
   identifier        = "cloudops-game-db"
-  engine_version    = "15.3"
+  engine_version    = "16.3"
   instance_class    = "db.t4g.micro"
   allocated_storage = 20
   db_name           = "game_db"
