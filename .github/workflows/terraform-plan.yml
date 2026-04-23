@@ -20,11 +20,11 @@ jobs:
     name: "Test Django Game Service"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -46,7 +46,7 @@ jobs:
       TF_WORKING_DIR: 'terraform/environments/dev'
       TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
