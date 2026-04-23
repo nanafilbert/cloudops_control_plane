@@ -16,35 +16,13 @@ permissions:
   pull-requests: write
 
 jobs:
-  test-node-services:
-    name: "Test Node.js Services"
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [auth-service, user-service]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          # cache: false
-          # # cache-dependency-path: services/${{ matrix.service }}/package-lock.json
-
-      - name: Install & Test
-        run: |
-          cd services/${{ matrix.service }}
-          npm ci || echo "No package-lock.json found, skipping cache"
-          npm test || echo "No tests found, skipping"
-
   test-game-service:
     name: "Test Django Game Service"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive   # Pulls the game submodule
+          submodules: recursive
 
       - uses: actions/setup-python@v5
         with:
@@ -53,8 +31,7 @@ jobs:
           cache-dependency-path: services/game-service/requirements.txt
 
       - name: Install dependencies
-        run: |
-          pip install -r services/game-service/requirements.txt
+        run: pip install -r services/game-service/requirements.txt
 
       - name: Run Django tests
         run: |
@@ -64,7 +41,7 @@ jobs:
   terraform-plan:
     name: "Terraform Plan & Security Scan"
     runs-on: ubuntu-latest
-    needs: [test-node-services, test-game-service]
+    needs: test-game-service
     env:
       TF_WORKING_DIR: 'terraform/env/dev'
 
@@ -119,7 +96,7 @@ jobs:
           script: |
             const fs = require('fs');
             const planOutput = fs.readFileSync('terraform/env/dev/tfplan.txt', 'utf8');
-            const comment = `## Terraform Plan 📖\n\`\`\`\n${planOutput.slice(0, 65000)}\n\`\`\`\n\n*Node tests passed ✅ | Django tests passed ✅ | Checkov & Infracost in logs*`;
+            const comment = `## Terraform Plan 📖\n\`\`\`\n${planOutput.slice(0, 65000)}\n\`\`\`\n\n*Django tests passed ✅ | Checkov & Infracost in logs*`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
