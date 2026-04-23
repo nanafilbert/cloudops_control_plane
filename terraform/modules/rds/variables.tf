@@ -36,7 +36,7 @@ variable "subnet_ids" {
 
 variable "backup_retention_period" {
   description = "Days to retain backups"
-  default     = 7
+  default     = 0
 }
 
 variable "backup_window" {

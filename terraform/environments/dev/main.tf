@@ -32,7 +32,7 @@ module "eks" {
   source = "../../modules/eks"
 
   cluster_name        = "cloudops-dev"
-  cluster_version     = "1.28"
+  cluster_version     = "1.31"
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
 
@@ -70,6 +70,7 @@ module "rds" {
   security_group_id = module.security.rds_security_group_id
   subnet_ids        = module.vpc.private_subnet_ids
   secret_name       = "cloudops/game-db"
+  backup_retention_period = 0 
 
   tags = local.common_tags
 }
