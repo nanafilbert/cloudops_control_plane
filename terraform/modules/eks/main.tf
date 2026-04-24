@@ -18,5 +18,8 @@ module "eks" {
   cluster_endpoint_private_access = false
   cluster_endpoint_public_access  = true
 
+  manage_aws_auth_configmap = var.manage_aws_auth_configmap
+  aws_auth_roles            = var.aws_auth_roles
+
   tags = var.tags
 }
