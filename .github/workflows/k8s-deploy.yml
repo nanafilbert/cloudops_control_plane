@@ -34,7 +34,7 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          aws eks update-kubeconfig --name cloudops-dev --region us-east-1 --role-arn ${{ secrets.GH_OIDC_ROLE_ARN }}
+          aws eks update-kubeconfig --name cloudops-dev --region us-east-1
       
       - name: Apply Kustomize overlays
         run: |
