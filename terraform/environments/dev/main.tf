@@ -43,7 +43,6 @@ module "eks" {
       groups   = ["system:masters"]
     }
   ]
-}
 
   node_groups = {
     main = {
