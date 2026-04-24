@@ -8,12 +8,12 @@ image:
   pullPolicy: Always
 
 service:
-  type: ClusterIP
+  type: Loadbalancer
   port: 80
   targetPort: 8080
 
 ingress:
-  enabled: true
+  enabled: false
   host: game.dev.yourdomain.com
   path: /
   pathType: Prefix
