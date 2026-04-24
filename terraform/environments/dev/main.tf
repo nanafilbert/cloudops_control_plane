@@ -35,6 +35,15 @@ module "eks" {
   cluster_version     = "1.30"
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
+  manage_aws_auth_configmap = true
+  aws_auth_roles = [
+    {
+      rolearn  = var.github_oidc_role_arn   # you need to pass this variable
+      username = "github-actions"
+      groups   = ["system:masters"]
+    }
+  ]
+}
 
   node_groups = {
     main = {

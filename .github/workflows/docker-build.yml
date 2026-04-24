@@ -38,4 +38,6 @@ jobs:
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           docker build -t $ECR_REGISTRY/game-service:$IMAGE_TAG ./services/game-service
+          docker tag $ECR_REGISTRY/game-service:$IMAGE_TAG $ECR_REGISTRY/game-service:latest
           docker push $ECR_REGISTRY/game-service:$IMAGE_TAG
+          docker push $ECR_REGISTRY/game-service:latest

@@ -33,9 +33,9 @@ jobs:
           aws-region: ${{ env.REGION }}
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.REGION }}
-
-      # Apply Kustomize base + overlay (namespaces, network policies, HPA)
+        run: |
+          aws eks update-kubeconfig --name cloudops-dev --region us-east-1 --role-arn ${{ secrets.GH_OIDC_ROLE_ARN }}
+      
       - name: Apply Kustomize overlays
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
