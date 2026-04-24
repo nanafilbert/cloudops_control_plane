@@ -15,5 +15,8 @@ module "eks" {
   # Enable OIDC provider for IRSA
   enable_irsa = true
 
+  cluster_endpoint_private_access = false
+  cluster_endpoint_public_access  = true
+
   tags = var.tags
 }
