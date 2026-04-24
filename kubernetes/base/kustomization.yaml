@@ -8,5 +8,4 @@ resources:
   - network-policies/default-deny.yaml
   - network-policies/allow-ingress-from-nginx.yaml
   - network-policies/allow-egress-to-rds-dns.yaml
-  - network-policies/allow-egress-to-redis.yaml   # <-- add this line
-  - autoscaling/hpa.yaml
+  - network-policies/allow-egress-to-redis.yaml   # <-- add this lines
