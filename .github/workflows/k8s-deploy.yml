@@ -45,11 +45,11 @@ jobs:
         run: |
           for service in auth-service user-service game-service; do
             helm upgrade --install $service ./helm/$service \
-              --namespace game-${{ env.ENV }} \
+              --namespace game-dev \
               --set image.tag=${{ github.event.workflow_run.head_sha }} \
               -f configs/${{ env.ENV }}/values-$service.yaml \
               --wait
-          done
+          
 
       # Install monitoring stack (idempotent)
       - name: Deploy monitoring stack
