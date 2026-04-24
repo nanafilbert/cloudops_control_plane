@@ -47,7 +47,7 @@ jobs:
             helm upgrade --install $service ./helm/$service \
               --namespace game-dev \
               --set image.tag=${{ github.event.workflow_run.head_sha }} \
-              -f configs/${{ env.ENV }}/values-$service.yaml \
+              -f configs/dev/values-game-service.yaml \
               --wait
           
 
