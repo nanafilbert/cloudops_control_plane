@@ -41,14 +41,13 @@ jobs:
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
       # Deploy Helm charts for all services using matrix
-      - name: Deploy Helm charts
+      - name: Deploy Helm chart
         run: |
-          for service in auth-service user-service game-service; do
-            helm upgrade --install $service ./helm/$service \
-              --namespace game-dev \
-              --set image.tag=${{ github.event.workflow_run.head_sha }} \
-              -f configs/dev/values-game-service.yaml \
-              --wait
+          helm upgrade --install game-service ./helm/game-service \
+           --namespace game-dev \
+           --set image.tag=${{ github.event.workflow_run.head_sha }} \
+           -f configs/dev/values-game-service.yaml \
+           --wait
           
 
       # Install monitoring stack (idempotent)
