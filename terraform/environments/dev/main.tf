@@ -98,6 +98,12 @@ module "irsa_game" {
   tags = local.common_tags
 }
 
+module "ecr_game" {
+  source          = "../../modules/ecr"
+  repository_name = "game-service"
+  tags            = local.common_tags
+}
+
 locals {
   common_tags = {
     Environment = "dev"
