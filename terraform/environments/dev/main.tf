@@ -38,7 +38,7 @@ module "eks" {
 
   node_groups = {
     main = {
-      desired_size = 1
+      desired_size = 2
       min_size     = 1
       max_size     = 2
       instance_types = ["t4g.micro"]
