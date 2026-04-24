@@ -74,4 +74,4 @@ jobs:
           for service in auth-service user-service game-service; do
             echo "Checking $service..."
             kubectl wait --for=condition=ready pod -l app=$service -n game-${{ env.ENV }} --timeout=120s
-          done
+          done 
