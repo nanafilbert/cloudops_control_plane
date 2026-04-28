@@ -15,7 +15,7 @@ provider "aws" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  vpc_name = "cloudops-dev"
+  vpc_name = "cloudops-dev-vpc"
   vpc_cidr = "10.0.0.0/16"
 
   azs             = ["us-east-1a", "us-east-1b"]
@@ -24,6 +24,15 @@ module "vpc" {
 
   enable_nat_gateway = true
   single_nat_gateway = true
+
+  nat_gateway_tags = {
+    Name = "cloudops-dev-nat-gateway"
+  }
+
+  eip_tags = {
+    Name = "cloudops-dev-eip"
+  }
+
 
   tags = local.common_tags
 }
@@ -51,6 +60,7 @@ module "eks" {
 
 module "security" {
   source = "../../modules/security"
+  name_prefix                    = "cloudops-dev"
 
   name_prefix                    = "cloudops-dev"
   vpc_id                         = module.vpc.vpc_id
@@ -62,7 +72,8 @@ module "security" {
 module "rds" {
   source = "../../modules/rds"
 
-  identifier        = "cloudops-game-db"
+
+  identifier        = "cloudops-game-db-postgres"
   engine_version    = "16.3"
   instance_class    = "db.t4g.micro"
   allocated_storage = 20
@@ -70,7 +81,7 @@ module "rds" {
   db_username       = var.db_username
   security_group_id = module.security.rds_security_group_id
   subnet_ids        = module.vpc.private_subnet_ids
-  secret_name       = "cloudops/game-db"
+  secret_name       = "cloudops-dev-game-db"
   backup_retention_period = 0 
 
   tags = local.common_tags
@@ -79,7 +90,8 @@ module "rds" {
 module "redis" {
   source = "../../modules/elasticache-redis"
 
-  name_prefix       = "cloudops-dev"
+  name_prefix       = "cloudops-dev-redis"
+  secret_name       = "cloudops-dev-redis"
   subnet_ids        = module.vpc.private_subnet_ids
   security_group_id = module.security.redis_security_group_id
   node_type         = "cache.t4g.micro"
@@ -100,7 +112,7 @@ module "irsa_game" {
 
 module "ecr_game" {
   source          = "../../modules/ecr"
-  repository_name = "game-service"
+  repository_name = "cloudops-dev-game-service"
   tags            = local.common_tags
 }
 

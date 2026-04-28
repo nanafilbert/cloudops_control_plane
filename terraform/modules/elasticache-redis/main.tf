@@ -4,7 +4,7 @@ resource "aws_elasticache_subnet_group" "redis" {
 }
 
 resource "aws_elasticache_cluster" "redis" {
-  cluster_id           = "${var.name_prefix}-redis"
+  cluster_id           = "${var.name_prefix}-cluster"
   engine               = "redis"
   node_type            = var.node_type
   num_cache_nodes      = 1
@@ -18,7 +18,7 @@ resource "aws_elasticache_cluster" "redis" {
 
 # Store Redis endpoint in Secrets Manager
 resource "aws_secretsmanager_secret" "redis_secret" {
-  name = "${var.name_prefix}-redis"
+  name = "var.secret_name"
 }
 
 resource "aws_secretsmanager_secret_version" "redis_secret_ver" {
