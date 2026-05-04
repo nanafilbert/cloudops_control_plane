@@ -40,7 +40,7 @@ module "vpc" {
 module "eks" {
   source = "../../modules/eks"
 
-  cluster_name        = "cloudops-dev"
+  cluster_name        = "cloudops-dev-cluster"
   cluster_version     = "1.31"
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
