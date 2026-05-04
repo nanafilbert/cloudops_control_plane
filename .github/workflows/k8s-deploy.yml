@@ -37,21 +37,13 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.REGION }}
 
-      - name: Debug cluster state
-        run: |
-          kubectl get nodes
-          kubectl get ns game-dev || echo "Namespace not found"
-
-      - name: Create namespace if missing
-        run: kubectl create ns game-dev --dry-run=client -o yaml | kubectl apply -f -
-
       - name: Apply Kustomize overlays
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
       - name: Deploy Helm chart
         run: |
-          helm upgrade --install game-service ./helm/cloudops-dev-game-service \
+          helm upgrade --install game-service ./helm/game-service \
             --namespace game-dev \
             --set image.tag=${{ github.event.workflow_run.head_sha }} \
             --set image.repository=cloudops-dev-game-service \
