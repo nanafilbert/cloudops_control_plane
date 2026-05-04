@@ -35,7 +35,7 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          aws eks update-kubeconfig --name cloudops-dev --region us-east-1
+          aws eks update-kubeconfig --name cloudops-dev-eks --region us-east-1
       
       - name: Apply Kustomize overlays
         run: |
