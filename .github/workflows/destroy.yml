@@ -41,6 +41,8 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Destroy
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
 
