@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: ${ECR_REGISTRY}/game-service
+  repository: ${ECR_REGISTRY}/cloudops-dev-game-service
   tag: latest
   pullPolicy: Always
 
