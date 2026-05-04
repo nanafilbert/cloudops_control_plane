@@ -32,7 +32,7 @@ module "vpc" {
 module "eks" {
   source = "../../modules/eks"
 
-  cluster_name        = "cloudops-dev-cluster"
+  cluster_name        = "cloudops-dev-eks-cluster"
   cluster_version     = "1.31"
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
@@ -52,9 +52,8 @@ module "eks" {
 
 module "security" {
   source = "../../modules/security"
-  name_prefix                    = "cloudops-dev"
+  name_prefix                    = "cloudops-dev-security"
 
-  name_prefix                    = "cloudops-dev"
   vpc_id                         = module.vpc.vpc_id
   eks_worker_security_group_id   = module.eks.node_security_group_id
 
@@ -65,7 +64,7 @@ module "rds" {
   source = "../../modules/rds"
 
 
-  identifier        = "cloudops-game-db-postgres"
+  identifier        = "cloudops-dev-db-postgres"
   engine_version    = "16.3"
   instance_class    = "db.t4g.micro"
   allocated_storage = 20
