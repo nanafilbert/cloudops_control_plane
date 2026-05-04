@@ -40,3 +40,16 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+
+variable "nat_gateway_tags" {
+  description = "Tags for NAT gateways"
+  type        = map(string)
+  default     = {}
+}
+
+variable "eip_tags" {
+  description = "Tags for EIPs"
+  type        = map(string)
+  default     = {}
+}

@@ -16,9 +16,8 @@ resource "aws_elasticache_cluster" "redis" {
   tags = var.tags
 }
 
-# Store Redis endpoint in Secrets Manager
 resource "aws_secretsmanager_secret" "redis_secret" {
-  name = "var.secret_name"
+  name = var.secret_name != null ? var.secret_name : "${var.name_prefix}-secret"
 }
 
 resource "aws_secretsmanager_secret_version" "redis_secret_ver" {
