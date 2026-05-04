@@ -44,7 +44,7 @@ jobs:
       # Deploy Helm charts for all services using matrix
       - name: Deploy Helm chart
         run: |
-          helm upgrade --install game-service ./helm/game-service \
+          helm upgrade --install cloudops-dev-game-service ./helm/cloudops-dev-game-service \
            --namespace game-dev \
            --set image.tag=${{ github.event.workflow_run.head_sha }} \
            --set image.repository=cloudops-dev-game-service \
