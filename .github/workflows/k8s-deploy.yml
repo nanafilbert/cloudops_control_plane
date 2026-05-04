@@ -17,7 +17,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
       ENV: dev  # Could be parameterized later
-      CLUSTER_NAME: cloudops-dev-eks
+      CLUSTER_NAME: cloudops-dev-eks-cluster
       REGION: us-east-1
 
     steps:
@@ -35,7 +35,7 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          aws eks update-kubeconfig --name cloudops-dev-eks --region us-east-1
+          aws eks update-kubeconfig --name cloudops-dev-eks-cluster --region us-east-1
       
       - name: Apply Kustomize overlays
         run: |
