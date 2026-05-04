@@ -17,7 +17,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
       ENV: dev  # Could be parameterized later
-      CLUSTER_NAME: cloudops-dev
+      CLUSTER_NAME: cloudops-dev-eks
       REGION: us-east-1
 
     steps:
