@@ -11,12 +11,11 @@ permissions:
   contents: read
 
 jobs:
-
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
-      ENV: dev  # Could be parameterized later
+      ENV: dev
       CLUSTER_NAME: cloudops-dev-eks-cluster
       REGION: us-east-1
 
@@ -34,25 +33,20 @@ jobs:
           aws-region: ${{ env.REGION }}
 
       - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --name cloudops-dev-eks-cluster --region us-east-1
-      
-      - name: Apply Kustomize overlays
-        run: |
-          kubectl apply -k kubernetes/overlays/${{ env.ENV }}
+        run: aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.REGION }}
 
-      # Deploy Helm charts for all services using matrix
+      - name: Apply Kustomize overlays
+        run: kubectl apply -k kubernetes/overlays/${{ env.ENV }}
+
       - name: Deploy Helm chart
         run: |
-          helm upgrade --install cloudops-dev-game-service ./helm/cloudops-dev-game-service \
-           --namespace game-dev \
-           --set image.tag=${{ github.event.workflow_run.head_sha }} \
-           --set image.repository=cloudops-dev-game-service \
-           -f configs/dev/values-game-service.yaml \
-           --wait
-          
+          helm upgrade --install game-service ./helm/game-service \
+            --namespace game-dev \
+            --set image.tag=${{ github.event.workflow_run.head_sha }} \
+            --set image.repository=cloudops-dev-game-service \
+            -f configs/dev/values-game-service.yaml \
+            --wait
 
-      # Install monitoring stack (idempotent)
       - name: Deploy monitoring stack
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -69,10 +63,7 @@ jobs:
           kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
           kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
 
-      # Post-deployment health check for each service
       - name: Health check
         run: |
-          for service in auth-service user-service game-service; do
-            echo "Checking $service..."
-            kubectl wait --for=condition=ready pod -l app=$service -n game-${{ env.ENV }} --timeout=120s
-          done 
+          echo "Waiting for game-service pods to be ready..."
+          kubectl wait --for=condition=ready pod -l app=game-service -n game-dev --timeout=120s
