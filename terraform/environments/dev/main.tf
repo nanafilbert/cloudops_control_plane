@@ -25,14 +25,6 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
-  nat_gateway_tags = {
-    Name = "cloudops-dev-nat-gateway"
-  }
-
-  eip_tags = {
-    Name = "cloudops-dev-eip"
-  }
-
 
   tags = local.common_tags
 }
