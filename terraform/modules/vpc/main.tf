@@ -16,8 +16,5 @@ module "vpc" {
   enable_dns_hostnames   = true
   enable_dns_support     = true
 
-  nat_gateway_tags = var.nat_gateway_tags
-  eip_tags         = var.eip_tags
-
   tags = var.tags
 }

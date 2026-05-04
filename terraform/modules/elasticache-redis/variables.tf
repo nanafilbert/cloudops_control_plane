@@ -26,7 +26,5 @@ variable "tags" {
 }
 
 variable "secret_name" {
-  description = "Name for the Secrets Manager secret storing Redis endpoint"
-  type        = string
-  default     = null   # if null, we generate a name based on name_prefix
+  type = string
 }

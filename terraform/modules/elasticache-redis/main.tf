@@ -17,7 +17,7 @@ resource "aws_elasticache_cluster" "redis" {
 }
 
 resource "aws_secretsmanager_secret" "redis_secret" {
-  name = var.secret_name != null ? var.secret_name : "${var.name_prefix}-secret"
+  name = var.secret_name
 }
 
 resource "aws_secretsmanager_secret_version" "redis_secret_ver" {
