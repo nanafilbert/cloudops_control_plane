@@ -39,7 +39,7 @@ module "vpc" {
 module "security" {
   source = "../../modules/security"
 
-  alb_sg_name   = local.alb_sg_name
+
   eks_sg_name   = local.eks_sg_name
   rds_sg_name   = local.rds_sg_name
   redis_sg_name = local.redis_sg_name

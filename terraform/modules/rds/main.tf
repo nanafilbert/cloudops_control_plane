@@ -29,12 +29,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   tags = merge(var.tags, { Name = var.subnet_grp_name })
 }
 
-resource "aws_db_parameter_group" "db_parameter_group" {
-  name   = var.param_grp_name
-  family = "postgres${split(".", var.engine_version)[0]}"
 
-  tags = merge(var.tags, { Name = var.param_grp_name })
-}
 
 resource "random_password" "db" {
   length  = 16

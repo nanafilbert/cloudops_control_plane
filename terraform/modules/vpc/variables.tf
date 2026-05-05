@@ -33,7 +33,10 @@ variable "public_rt_name" {
  type = string 
 }
 
-variable "private_rt_name"    { description = "Name of the private route table"; type = string }
+variable "private_rt_name" { 
+ description = "Name of the private route table"
+ type = string 
+}
 
 variable "vpc_cidr" { 
  description = "CIDR block for the VPC"
