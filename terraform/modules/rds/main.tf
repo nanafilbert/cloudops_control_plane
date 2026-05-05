@@ -1,13 +1,20 @@
 
 terraform {
   required_providers {
-    aws    = { source = "hashicorp/aws";    version = "~> 5.0" }
-    random = { source = "hashicorp/random"; version = "~> 3.0" }
+    aws    = { 
+     source = "hashicorp/aws"
+     version = "~> 5.0" 
+    }
+
+    random = { 
+      source = "hashicorp/random"
+      version = "~> 3.0" 
+    }
   }
 }
 
 # derive family dynamically — "16.3" → "postgres16"
-resource "aws_db_parameter_group" "this" {
+resource "aws_db_parameter_group" "db_parameter_group" {
   name   = var.param_grp_name
   family = "postgres${split(".", var.engine_version)[0]}"
 
@@ -15,16 +22,16 @@ resource "aws_db_parameter_group" "this" {
 }
 
 
-resource "aws_db_subnet_group" "this" {
+resource "aws_db_subnet_group" "db_subnet_group" {
   name       = var.subnet_grp_name
   subnet_ids = var.subnet_ids
 
   tags = merge(var.tags, { Name = var.subnet_grp_name })
 }
 
-resource "aws_db_parameter_group" "this" {
+resource "aws_db_parameter_group" "db_parameter_group" {
   name   = var.param_grp_name
-  family = "postgres16"
+  family = "postgres${split(".", var.engine_version)[0]}"
 
   tags = merge(var.tags, { Name = var.param_grp_name })
 }
@@ -44,8 +51,8 @@ resource "aws_db_instance" "this" {
   username          = var.db_username
   password          = random_password.db.result
 
-  db_subnet_group_name   = aws_db_subnet_group.this.name
-  parameter_group_name   = aws_db_parameter_group.this.name
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  parameter_group_name   = aws_db_parameter_group.db_parameter_group.name
   vpc_security_group_ids = [var.security_group_id]
 
   backup_retention_period = var.backup_retention_period
