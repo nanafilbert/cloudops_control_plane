@@ -14,7 +14,7 @@ provider "aws" {
 
 # ── VPC ──────────────────────────────────────────────────────────
 module "vpc" {
-  source = "../../Modules/vpc"
+  source = "../../modules/vpc"
 
   vpc_name             = local.vpc_name
   igw_name             = local.igw_name
@@ -37,7 +37,7 @@ module "vpc" {
 
 # ── Security Groups ───────────────────────────────────────────────
 module "security" {
-  source = "../../Modules/security"
+  source = "../../modules/security"
 
   alb_sg_name   = local.alb_sg_name
   eks_sg_name   = local.eks_sg_name
@@ -50,7 +50,7 @@ module "security" {
 
 # ── EKS ──────────────────────────────────────────────────────────
 module "eks" {
-  source = "../../Modules/eks"
+  source = "../../modules/eks"
 
   cluster_name      = local.eks_cluster_name
   cluster_role_name = local.eks_cluster_role
@@ -75,7 +75,7 @@ module "eks" {
 
 # ── RDS ──────────────────────────────────────────────────────────
 module "rds" {
-  source = "../../Modules/rds"
+  source = "../../modules/rds"
 
   identifier        = local.rds_identifier
   subnet_grp_name   = local.rds_subnet_grp
@@ -95,7 +95,7 @@ module "rds" {
 
 # ── Redis ─────────────────────────────────────────────────────────
 module "redis" {
-  source = "../../Modules/elasticache-redis"
+  source = "../../modules/elasticache-redis"
 
   cluster_name      = local.redis_cluster
   subnet_grp_name   = local.redis_subnet_grp
@@ -109,7 +109,7 @@ module "redis" {
 
 # ── ECR ──────────────────────────────────────────────────────────
 module "ecr_game" {
-  source = "../../Modules/ecr"
+  source = "../../modules/ecr"
 
   repository_name = local.ecr_game_repo
 
@@ -118,7 +118,7 @@ module "ecr_game" {
 
 # ── IAM / IRSA ────────────────────────────────────────────────────
 module "irsa_game" {
-  source = "../../Modules/iam-irsa"
+  source = "../../modules/iam-irsa"
 
   role_name                    = local.irsa_game_role
   policy_name                  = local.irsa_game_policy
