@@ -1,51 +1,72 @@
 
+terraform {
+  required_providers {
+    aws    = { source = "hashicorp/aws";    version = "~> 5.0" }
+    random = { source = "hashicorp/random"; version = "~> 3.0" }
+  }
+}
 
-resource "random_password" "master" {
+# derive family dynamically — "16.3" → "postgres16"
+resource "aws_db_parameter_group" "this" {
+  name   = var.param_grp_name
+  family = "postgres${split(".", var.engine_version)[0]}"
+
+  tags = merge(var.tags, { Name = var.param_grp_name })
+}
+
+
+resource "aws_db_subnet_group" "this" {
+  name       = var.subnet_grp_name
+  subnet_ids = var.subnet_ids
+
+  tags = merge(var.tags, { Name = var.subnet_grp_name })
+}
+
+resource "aws_db_parameter_group" "this" {
+  name   = var.param_grp_name
+  family = "postgres16"
+
+  tags = merge(var.tags, { Name = var.param_grp_name })
+}
+
+resource "random_password" "db" {
   length  = 16
   special = false
 }
 
-resource "aws_db_instance" "postgres" {
-  identifier = var.identifier
-  engine     = "postgres"
-  engine_version = var.engine_version
-  instance_class = var.instance_class
+resource "aws_db_instance" "this" {
+  identifier        = var.identifier
+  engine            = "postgres"
+  engine_version    = var.engine_version
+  instance_class    = var.instance_class
+  allocated_storage = var.allocated_storage
+  db_name           = var.db_name
+  username          = var.db_username
+  password          = random_password.db.result
 
-  allocated_storage     = var.allocated_storage
-  storage_encrypted     = true
-  db_name               = var.db_name
-  username              = var.db_username
-  password              = random_password.master.result
-
+  db_subnet_group_name   = aws_db_subnet_group.this.name
+  parameter_group_name   = aws_db_parameter_group.this.name
   vpc_security_group_ids = [var.security_group_id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
 
   backup_retention_period = var.backup_retention_period
-  backup_window          = var.backup_window
-  maintenance_window     = var.maintenance_window
+  skip_final_snapshot     = true
+  deletion_protection     = false
 
-  skip_final_snapshot    = var.skip_final_snapshot
-  deletion_protection    = var.deletion_protection
-
-  tags = var.tags
+  tags = merge(var.tags, { Name = var.identifier })
 }
 
-resource "aws_db_subnet_group" "main" {
-  name       = "${var.identifier}-subnet-group"
-  subnet_ids = var.subnet_ids
-}
-
-resource "aws_secretsmanager_secret" "db_secret" {
+resource "aws_secretsmanager_secret" "db" {
   name = var.secret_name
+  tags = merge(var.tags, { Name = var.secret_name })
 }
 
-resource "aws_secretsmanager_secret_version" "db_secret_ver" {
-  secret_id = aws_secretsmanager_secret.db_secret.id
+resource "aws_secretsmanager_secret_version" "db" {
+  secret_id = aws_secretsmanager_secret.db.id
   secret_string = jsonencode({
+    host     = aws_db_instance.this.address
+    port     = aws_db_instance.this.port
+    db_name  = var.db_name
     username = var.db_username
-    password = random_password.master.result
-    host     = aws_db_instance.postgres.address
-    port     = aws_db_instance.postgres.port
-    dbname   = var.db_name
+    password = random_password.db.result
   })
 }

@@ -1,53 +1,45 @@
-# Security groups
+
+
+# ── EKS ───────────────────────────────────────────────────────────
+resource "aws_security_group" "eks" {
+  name   = var.eks_sg_name
+  vpc_id = var.vpc_id
+  tags   = merge(var.tags, { Name = var.eks_sg_name })
+}
+
+
+resource "aws_vpc_security_group_egress_rule" "eks_out" {
+  security_group_id = aws_security_group.eks.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+# ── RDS ───────────────────────────────────────────────────────────
 resource "aws_security_group" "rds" {
-  name        = "${var.name_prefix}-rds-sg"
-  description = "Security group for RDS"
-  vpc_id      = var.vpc_id
-  tags        = merge(var.tags, { Name = "${var.name_prefix}-rds-sg" })
+  name   = var.rds_sg_name
+  vpc_id = var.vpc_id
+  tags   = merge(var.tags, { Name = var.rds_sg_name })
 }
 
-resource "aws_security_group" "eks_workers" {
-  name        = "${var.name_prefix}-eks-workers-sg"
-  description = "Additional rules for EKS worker nodes"
-  vpc_id      = var.vpc_id
-  tags        = merge(var.tags, { Name = "${var.name_prefix}-eks-workers-sg" })
+resource "aws_vpc_security_group_ingress_rule" "rds_from_eks" {
+  security_group_id            = aws_security_group.rds.id
+  referenced_security_group_id = aws_security_group.eks.id
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
 }
 
-# KMS key for encryption
-resource "aws_kms_key" "main" {
-  description             = "${var.name_prefix}-kms-key"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
-  tags                    = merge(var.tags, { Name = "${var.name_prefix}-kms-key" })
-}
-
-resource "aws_kms_alias" "main" {
-  name          = "alias/${var.name_prefix}-key"
-  target_key_id = aws_kms_key.main.key_id
-}
-
-# Security group rules (example: allow RDS from EKS workers)
-resource "aws_security_group_rule" "rds_ingress_eks" {
-  type                     = "ingress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  source_security_group_id = var.eks_worker_security_group_id
-  security_group_id        = aws_security_group.rds.id
-}
-
+# ── Redis ─────────────────────────────────────────────────────────
 resource "aws_security_group" "redis" {
-  name        = "${var.name_prefix}-redis-sg"
-  description = "Security group for Redis"
-  vpc_id      = var.vpc_id
-  tags        = merge(var.tags, { Name = "${var.name_prefix}-redis-sg" })
+  name   = var.redis_sg_name
+  vpc_id = var.vpc_id
+  tags   = merge(var.tags, { Name = var.redis_sg_name })
 }
 
-resource "aws_security_group_rule" "redis_ingress_eks" {
-  type                     = "ingress"
-  from_port                = 6379
-  to_port                  = 6379
-  protocol                 = "tcp"
-  source_security_group_id = var.eks_worker_security_group_id
-  security_group_id        = aws_security_group.redis.id
+resource "aws_vpc_security_group_ingress_rule" "redis_from_eks" {
+  security_group_id            = aws_security_group.redis.id
+  referenced_security_group_id = aws_security_group.eks.id
+  from_port                    = 6379
+  to_port                      = 6379
+  ip_protocol                  = "tcp"
 }

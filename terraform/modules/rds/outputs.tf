@@ -1,11 +1,3 @@
-output "db_host" {
-  value = aws_db_instance.postgres.address
-}
-
-output "db_port" {
-  value = aws_db_instance.postgres.port
-}
-
-output "db_secret_arn" {
-  value = aws_secretsmanager_secret.db_secret.arn
-}
+output "db_endpoint"   { value = aws_db_instance.this.address }
+output "db_secret_arn" { value = aws_secretsmanager_secret.db.arn }
+output "db_port"       { value = aws_db_instance.this.port }

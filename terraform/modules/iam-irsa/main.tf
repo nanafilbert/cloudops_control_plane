@@ -1,25 +1,51 @@
+locals {
+  oidc_url = replace(var.oidc_provider_arn, "/^arn:aws:iam::[0-9]+:oidc-provider\\//", "")
+}
 
+data "aws_caller_identity" "current" {}
 
-module "irsa" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "5.20"
+resource "aws_iam_role" "irsa" {
+  name = var.role_name
 
-  role_name = "${var.namespace}-${var.service_account}-irsa"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = var.oidc_provider_arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_url}:sub" = "system:serviceaccount:${var.namespace}:${var.service_account}"
+          "${local.oidc_url}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
 
-  # Use the correct argument name (no "_manager" suffix)
-  attach_external_secrets_policy = var.attach_secretsmanager_policy
+  tags = merge(var.tags, { Name = var.role_name })
+}
 
-  # These can be left as defaults (allow all secrets in the account)
-  # external_secrets_ssm_parameter_arns = var.parameter_arns
-  # external_secrets_secrets_manager_arns = var.secrets_manager_arns
-  # external_secrets_kms_key_arns = var.kms_key_arns
+resource "aws_iam_policy" "secretsmanager" {
+  count = var.attach_secretsmanager_policy ? 1 : 0
 
-  oidc_providers = {
-    ex = {
-      provider_arn = var.oidc_provider_arn
-      namespace_service_accounts = ["${var.namespace}:${var.service_account}"]
-    }
-  }
+  name = var.policy_name
 
-  tags = var.tags
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+      Resource = "*"
+    }]
+  })
+
+  tags = merge(var.tags, { Name = var.policy_name })
+}
+
+resource "aws_iam_role_policy_attachment" "secretsmanager" {
+  count      = var.attach_secretsmanager_policy ? 1 : 0
+  role       = aws_iam_role.irsa.name
+  policy_arn = aws_iam_policy.secretsmanager[0].arn
 }

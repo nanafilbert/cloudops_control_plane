@@ -14,22 +14,21 @@ provider "aws" {
 
 # ── VPC ──────────────────────────────────────────────────────────
 module "vpc" {
-  source = "../../modules/vpc"
+  source = "../../Modules/vpc"
 
   vpc_name             = local.vpc_name
-  public_subnet_name   = local.public_subnet_name
-  private_subnet_name  = local.private_subnet_name
-  nat_gw_name          = local.nat_gw_name
-  nat_eip_name         = local.nat_eip_name
   igw_name             = local.igw_name
+  nat_eip_name         = local.nat_eip_name
+  nat_gw_name          = local.nat_gw_name
   public_rt_name       = local.public_rt_name
   private_rt_name      = local.private_rt_name
+  public_subnet_names  = local.public_subnet_names
+  private_subnet_names = local.private_subnet_names
 
-  vpc_cidr        = "10.0.0.0/16"
-  azs             = ["us-east-1a", "us-east-1b"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
-
+  vpc_cidr           = "10.0.0.0/16"
+  azs                = ["us-east-1a", "us-east-1b"]
+  public_subnets     = ["10.0.101.0/24", "10.0.102.0/24"]
+  private_subnets    = ["10.0.1.0/24",   "10.0.2.0/24"]
   enable_nat_gateway = true
   single_nat_gateway = true
 
@@ -38,31 +37,31 @@ module "vpc" {
 
 # ── Security Groups ───────────────────────────────────────────────
 module "security" {
-  source = "../../modules/security"
+  source = "../../Modules/security"
 
+  alb_sg_name   = local.alb_sg_name
   eks_sg_name   = local.eks_sg_name
   rds_sg_name   = local.rds_sg_name
   redis_sg_name = local.redis_sg_name
-  alb_sg_name   = local.alb_sg_name
-
-  vpc_id                       = module.vpc.vpc_id
-  eks_worker_security_group_id = module.eks.node_security_group_id
+  vpc_id        = module.vpc.vpc_id
 
   tags = local.common_tags
 }
 
 # ── EKS ──────────────────────────────────────────────────────────
 module "eks" {
-  source = "../../modules/eks"
+  source = "../../Modules/eks"
 
-  cluster_name       = local.eks_cluster_name
-  cluster_version    = "1.31"
-  vpc_id             = module.vpc.vpc_id
+  cluster_name      = local.eks_cluster_name
+  cluster_role_name = local.eks_cluster_role
+  node_role_name    = local.eks_node_role
+  cluster_version   = "1.31"
+  vpc_id            = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 
   node_groups = {
     main = {
-      name           = local.eks_node_group_name
+      name           = "${local.base}-eks-ng-main"
       desired_size   = 2
       min_size       = 1
       max_size       = 2
@@ -76,19 +75,19 @@ module "eks" {
 
 # ── RDS ──────────────────────────────────────────────────────────
 module "rds" {
-  source = "../../modules/rds"
+  source = "../../Modules/rds"
 
-  identifier       = local.rds_identifier
-  subnet_grp_name  = local.rds_subnet_grp_name
-  secret_name      = local.rds_secret_name
-
-  engine_version          = "16.3"
-  instance_class          = "db.t4g.micro"
-  allocated_storage       = 20
-  db_name                 = "game_db"
-  db_username             = var.db_username
-  security_group_id       = module.security.rds_security_group_id
-  subnet_ids              = module.vpc.private_subnet_ids
+  identifier        = local.rds_identifier
+  subnet_grp_name   = local.rds_subnet_grp
+  param_grp_name    = local.rds_param_grp
+  secret_name       = local.rds_secret
+  engine_version    = "16.3"
+  instance_class    = "db.t4g.micro"
+  allocated_storage = 20
+  db_name           = "game_db"
+  db_username       = var.db_username
+  security_group_id = module.security.rds_security_group_id
+  subnet_ids        = module.vpc.private_subnet_ids
   backup_retention_period = 0
 
   tags = local.common_tags
@@ -96,22 +95,21 @@ module "rds" {
 
 # ── Redis ─────────────────────────────────────────────────────────
 module "redis" {
-  source = "../../modules/elasticache-redis"
+  source = "../../Modules/elasticache-redis"
 
-  cluster_name    = local.redis_cluster_name
-  subnet_grp_name = local.redis_subnet_grp
-  secret_name     = local.redis_secret_name
-
+  cluster_name      = local.redis_cluster
+  subnet_grp_name   = local.redis_subnet_grp
+  secret_name       = local.redis_secret
+  node_type         = "cache.t4g.micro"
   subnet_ids        = module.vpc.private_subnet_ids
   security_group_id = module.security.redis_security_group_id
-  node_type         = "cache.t4g.micro"
 
   tags = local.common_tags
 }
 
 # ── ECR ──────────────────────────────────────────────────────────
 module "ecr_game" {
-  source = "../../modules/ecr"
+  source = "../../Modules/ecr"
 
   repository_name = local.ecr_game_repo
 
@@ -120,21 +118,14 @@ module "ecr_game" {
 
 # ── IAM / IRSA ────────────────────────────────────────────────────
 module "irsa_game" {
-  source = "../../modules/iam-irsa"
+  source = "../../Modules/iam-irsa"
 
-  role_name                    = local.irsa_game_role_name
+  role_name                    = local.irsa_game_role
+  policy_name                  = local.irsa_game_policy
   oidc_provider_arn            = module.eks.oidc_provider_arn
   namespace                    = "game"
-  service_account              = local.irsa_game_sa_name
+  service_account              = "game-sa"
   attach_secretsmanager_policy = true
 
   tags = local.common_tags
-}
-
-locals {
-  common_tags = {
-    Environment = local.env
-    Project     = "cloudops-control-plane"
-    ManagedBy   = "Terraform"
-  }
 }

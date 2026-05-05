@@ -1,15 +1,6 @@
-output "cluster_name" {
-  value = module.eks.cluster_name
-}
-
-output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
-}
-
-output "oidc_provider_arn" {
-  value = module.eks.oidc_provider_arn
-}
-
-output "node_security_group_id" {
-  value = module.eks.node_security_group_id
-}
+output "cluster_name"           { value = aws_eks_cluster.this.name }
+output "cluster_endpoint"       { value = aws_eks_cluster.this.endpoint }
+output "cluster_ca"             { value = aws_eks_cluster.this.certificate_authority[0].data }
+output "oidc_provider_arn"      { value = aws_iam_openid_connect_provider.eks.arn }
+output "oidc_issuer_url"        { value = aws_eks_cluster.this.identity[0].oidc[0].issuer }
+output "node_security_group_id" { value = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id }
