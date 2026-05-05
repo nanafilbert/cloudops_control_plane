@@ -19,7 +19,7 @@ locals {
   redis_sg_name = "${local.base}-redis-sg"
 
   # EKS
-  eks_cluster_name   = "${local.base}-eks"
+  eks_cluster_name   = "${local.base}-eks-cluster"
   eks_cluster_role   = "${local.base}-eks-cluster-role"
   eks_node_role      = "${local.base}-eks-node-role"
 
