@@ -95,7 +95,13 @@ resource "aws_eks_node_group" "this" {
 
   tags = merge(var.tags, { Name = each.value.name })
 
-  data "tls_certificate" "eks" {
+
+  depends_on = [aws_iam_role_policy_attachment.node_policies]
+}
+
+
+
+data "tls_certificate" "eks" {
   url = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
 
@@ -105,7 +111,4 @@ resource "aws_iam_openid_connect_provider" "eks" {
   url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
 
   tags = merge(var.tags, { Name = "${var.cluster_name}-oidc-provider" })
-}
-
-  depends_on = [aws_iam_role_policy_attachment.node_policies]
 }

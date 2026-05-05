@@ -1,9 +1,11 @@
 output "redis_endpoint" {
-  value = aws_elasticache_cluster.redis.cache_nodes[0].address
+  value = aws_elasticache_replication_group.this.primary_endpoint_address
 }
+
 output "redis_port" {
-  value = aws_elasticache_cluster.redis.port
+  value = aws_elasticache_replication_group.this.port
 }
+
 output "redis_secret_arn" {
-  value = aws_secretsmanager_secret.redis_secret.arn
+  value = aws_secretsmanager_secret.redis.arn
 }
