@@ -35,7 +35,7 @@ locals {
   redis_secret      = "${local.base}-redis-secret"
 
   # ECR
-  ecr_game_repo     = "${local.project}/${local.env}/game-service"
+  ecr_game_repo     = "${local.project}-${local.env}-game-service"
 
   # IRSA
   irsa_game_role    = "${local.base}-game-irsa-role"
