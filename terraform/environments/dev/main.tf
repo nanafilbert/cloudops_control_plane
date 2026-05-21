@@ -67,7 +67,7 @@ module "eks" {
       min_size       = 1
       max_size       = 2
       instance_types = ["t4g.small"]
-      ami_type       = "AL2_ARM_64"
+      ami_type       = "AL2023_ARM_64_STANDARD"
     }
   }
 
