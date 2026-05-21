@@ -3,12 +3,14 @@
 terraform.tfstate*
 terraform.tfstate.*.backup
 *.tfvars
+*.tfplan
 *.tfvars.json
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 .terraform.lock.hcl
+
 
 # Kubernetes / Helm
 *.secret.yaml
