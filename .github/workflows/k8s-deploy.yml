@@ -46,7 +46,7 @@ jobs:
           helm upgrade --install game-service ./helm/game-service \
             --namespace game-dev \
             --create-namespace \
-            --values configs/dev/game-service.yaml \
+            --values configs/dev/values-game-service.yaml \
             --set image.repository=234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops/dev/game-service \
             --set image.tag=${{ github.sha }} \
             --wait \
