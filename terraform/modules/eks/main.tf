@@ -82,7 +82,7 @@ resource "aws_eks_cluster" "this" {
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy,
 
-  aws_iam_role_policy_attachment.vpc_policy, ]
+  aws_iam_role_policy_attachment.cluster.vpc_policy, ]
 
 }
 
@@ -104,9 +104,14 @@ resource "aws_eks_node_group" "this" {
   }
 
   tags = merge(var.tags, { Name = each.value.name })
+  
 
+  depends_on = [
+    aws_iam_role_policy_attachment.node_worker_policy,
+    aws_iam_role_policy_attachment.node_cni_policy,
+    aws_iam_role_policy_attachment.node_ecr_policy,
+  ]
 
-  depends_on = [aws_iam_role_policy_attachment.node_policies]
 }
 
 
