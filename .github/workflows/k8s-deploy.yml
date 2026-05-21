@@ -52,6 +52,11 @@ jobs:
             --wait \
             --timeout 3m
 
+      - name: Apply Cluster Manifests
+        run: |
+          kubectl apply -f kubernetes/base/cluster-secret-store.yaml
+          kubectl apply -f kubernetes/overlays/dev
+
       - name: Deploy helm charts
         run: | 
           helm upgrade --install game-service ./helm/game-service \
