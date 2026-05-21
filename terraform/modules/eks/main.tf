@@ -82,7 +82,7 @@ resource "aws_eks_cluster" "this" {
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy,
 
-  aws_iam_role_policy_attachment.cluster.vpc_policy, ]
+  aws_iam_role_policy_attachment.cluster_vpc_policy, ]
 
 }
 
