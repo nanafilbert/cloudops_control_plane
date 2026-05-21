@@ -43,6 +43,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}  # Ensure this token has permissions to access artifacts
           run-id: ${{ github.event.workflow_run.id }}
 
+      - name: Force delete pending secrets
+        run: |
+          for secret in cloudops-dev-redis-secret cloudops-dev-postgres-secret; do
+            if aws secretsmanager describe-secret --secret-id $secret --region us-east-1 2>/dev/null; then
+              echo "Deleting secret $secret"
+              aws secretsmanager delete-secret --secret-id $secret --force-delete-without-recovery --region us-east-1 || true
+            fi
+          done
+
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
