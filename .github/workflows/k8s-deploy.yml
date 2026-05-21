@@ -41,15 +41,16 @@ jobs:
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
-      - name: Deploy Helm chart
-        run: |
+      - name: Deploy game-service
+        run: | 
           helm upgrade --install game-service ./helm/game-service \
             --namespace game-dev \
-            --set image.tag=${{ github.event.workflow_run.head_sha }} \
-            --set image.repository=cloudops-dev-game-service \
-            -f configs/dev/values-game-service.yaml \
+            --create-namespace \
+            --values configs/dev/game-service.yaml \
+            --set image.repository=234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops/dev/game-service \
+            --set image.tag=${{ github.sha }} \
             --wait \
-            --timeout 10m
+            --timeout 5m
 
       - name: Deploy monitoring stack
         run: |
