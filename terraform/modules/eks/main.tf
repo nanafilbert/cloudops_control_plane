@@ -66,7 +66,7 @@ resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
   version  = var.cluster_version
   role_arn = aws_iam_role.cluster.arn
-
+  authentication_mode = var.authentication_mode    # Use both API and ConfigMap for authentication
   vpc_config {
     subnet_ids = var.private_subnet_ids
   }
