@@ -55,7 +55,7 @@ module "eks" {
   cluster_name      = local.eks_cluster_name
   cluster_role_name = local.eks_cluster_role
   node_role_name    = local.eks_node_role
-  cluster_version   = "1.32"
+  cluster_version   = "1.33"
   vpc_id            = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 
