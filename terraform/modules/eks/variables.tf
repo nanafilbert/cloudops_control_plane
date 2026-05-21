@@ -19,3 +19,9 @@ variable "node_groups" {
     ami_type       = string
   }))
 }
+
+variable "authentication_mode" {
+  description = "EKS cluster authentication mode (CONFIG_MAP, API, API_AND_CONFIG_MAP)"
+  type        = string
+  default     = "API_AND_CONFIG_MAP"
+}

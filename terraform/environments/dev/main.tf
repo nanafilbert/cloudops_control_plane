@@ -58,6 +58,7 @@ module "eks" {
   cluster_version   = "1.33"
   vpc_id            = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
+  authentication_mode = var.authentication_mode    # Use both API and ConfigMap for authentication
 
   node_groups = {
     main = {
