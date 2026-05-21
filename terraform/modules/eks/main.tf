@@ -73,7 +73,6 @@ resource "aws_eks_cluster" "this" {
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
 
-  authentication_mode = var.authentication_mode    # Use both API and ConfigMap for authentication
 }
 
 # ── Node Groups ───────────────────────────────────────────────────
