@@ -14,3 +14,7 @@ variable "github_oidc_role_arn" {
   type        = string
 }
 
+variable "admin_iam_principal_arn" {
+  description = "IAM user or role ARN for EKS admin access"
+  type        = string
+}

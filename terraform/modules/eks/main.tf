@@ -11,8 +11,6 @@ terraform {
   }
 }
 
-
-
 # ── IAM: Cluster Role ─────────────────────────────────────────────
 resource "aws_iam_role" "cluster" {
   name = var.cluster_role_name
@@ -68,22 +66,21 @@ resource "aws_eks_cluster" "this" {
   role_arn = aws_iam_role.cluster.arn
 
   vpc_config {
-    subnet_ids = var.private_subnet_ids
-    endpoint_public_access  = false
+    subnet_ids              = var.private_subnet_ids
+    endpoint_public_access  = true
     endpoint_private_access = true
   }
 
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+    authentication_mode                         = "API_AND_CONFIG_MAP"
     bootstrap_cluster_creator_admin_permissions = true
   }
 
   tags = merge(var.tags, { Name = var.cluster_name })
 
-  depends_on = [aws_iam_role_policy_attachment.cluster_policy,
-
-  aws_iam_role_policy_attachment.cluster_vpc_policy, ]
-
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_policy,
+  ]
 }
 
 # ── Node Groups ───────────────────────────────────────────────────
@@ -91,7 +88,7 @@ resource "aws_eks_node_group" "this" {
   for_each = var.node_groups
 
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = each.value.name          # explicit name from var
+  node_group_name = each.value.name
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = var.private_subnet_ids
   instance_types  = each.value.instance_types
@@ -103,19 +100,18 @@ resource "aws_eks_node_group" "this" {
     max_size     = each.value.max_size
   }
 
+  update_config {
+    max_unavailable = 1
+  }
+
   tags = merge(var.tags, { Name = each.value.name })
-  
 
   depends_on = [
-    aws_iam_role_policy_attachment.node_worker_policy,
-    aws_iam_role_policy_attachment.node_cni_policy,
-    aws_iam_role_policy_attachment.node_ecr_policy,
+    aws_iam_role_policy_attachment.node_policies,
   ]
-
 }
 
-
-
+# ── OIDC Provider (for IRSA) ──────────────────────────────────────
 data "tls_certificate" "eks" {
   url = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
@@ -128,10 +124,13 @@ resource "aws_iam_openid_connect_provider" "eks" {
   tags = merge(var.tags, { Name = "${var.cluster_name}-oidc-provider" })
 }
 
+# ── Admin Access Entry ────────────────────────────────────────────
 resource "aws_eks_access_entry" "admin_user" {
   cluster_name  = aws_eks_cluster.this.name
-  principal_arn = "arn:aws:iam::234506497205:user/filbert" 
+  principal_arn = var.admin_iam_principal_arn
   type          = "STANDARD"
+
+  tags = merge(var.tags, { Name = "${var.cluster_name}-admin-access" })
 }
 
 resource "aws_eks_access_policy_association" "admin_user" {

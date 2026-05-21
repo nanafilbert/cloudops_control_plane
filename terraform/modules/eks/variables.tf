@@ -20,3 +20,7 @@ variable "node_groups" {
   }))
 }
 
+variable "admin_iam_principal_arn" {
+  description = "IAM user or role ARN to grant EKS cluster admin access"
+  type        = string
+}

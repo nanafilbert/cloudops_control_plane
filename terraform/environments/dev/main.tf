@@ -58,6 +58,7 @@ module "eks" {
   cluster_version   = "1.33"
   vpc_id            = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
+  admin_iam_principal_arn = var.admin_iam_principal_arn
   
   node_groups = {
     main = {
