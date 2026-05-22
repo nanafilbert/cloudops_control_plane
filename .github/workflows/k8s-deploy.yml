@@ -52,6 +52,13 @@ jobs:
             --wait \
             --timeout 3m
 
+      - name: Wait for ESO CRDs to be established
+        run: |
+          kubectl wait --for=condition=established \
+            crd/clustersecretstores.external-secrets.io \
+            crd/externalsecrets.external-secrets.io \
+            --timeout=60s  
+
       - name: Apply Cluster Manifests
         run: |
           kubectl apply -f kubernetes/base/cluster-secret-store.yaml
