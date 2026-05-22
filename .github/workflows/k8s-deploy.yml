@@ -52,8 +52,6 @@ jobs:
             --wait \
             --timeout 3m
 
-            # Give API server time to refresh discovery cache
-            sleep 15
 
       - name: Wait for ESO CRDs to be established
         run: |
@@ -61,6 +59,10 @@ jobs:
             crd/clustersecretstores.external-secrets.io \
             crd/externalsecrets.external-secrets.io \
             --timeout=60s  
+
+            
+            # Give API server time to refresh discovery cache
+            sleep 15
 
       - name: Apply Cluster Manifests
         run: |
