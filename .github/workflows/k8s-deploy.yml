@@ -66,6 +66,12 @@ jobs:
 
       - name: Apply Cluster Manifests
         run: |
+          # Wait until ClusterSecretStore is actually queryable
+           until kubectl api-resources | grep -q "clustersecretstores"; do
+             echo "Waiting for ClusterSecretStore API to be available..."
+             sleep 5
+           done
+
           kubectl apply -f kubernetes/base/cluster-secret-store.yaml
           kubectl apply -f kubernetes/overlays/dev
 
