@@ -130,3 +130,17 @@ module "irsa_game" {
 
   tags = local.common_tags
 }
+
+
+module "irsa_eso" {
+  source = "../../modules/iam-irsa"
+
+  role_name                    = "${local.base}-eso-irsa-role"
+  policy_name                  = "${local.base}-eso-secretsmanager-policy"
+  oidc_provider_arn            = module.eks.oidc_provider_arn
+  namespace                    = "external-secrets"
+  service_account              = "external-secrets"
+  attach_secretsmanager_policy = true
+
+  tags = local.common_tags
+}

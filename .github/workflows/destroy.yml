@@ -22,18 +22,83 @@ jobs:
     if: github.event.inputs.confirm == 'DESTROY'
     env:
       TF_WORKING_DIR: 'terraform/environments/${{ github.event.inputs.environment }}'
+      CLUSTER_NAME: cloudops-dev-eks-cluster
+      REGION: us-east-1
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Configure AWS Credentials (OIDC)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
-          aws-region: us-east-1
-          # Note: Ensure the OIDC role has permissions to delete all resources in the target environment
+          aws-region: ${{ env.REGION }}
 
+      # ── Step 1: Remove Kubernetes resources first ─────────────
+      # These are not in Terraform state — must be cleaned manually
+      # or they will block VPC/subnet deletion
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.CLUSTER_NAME }} \
+            --region ${{ env.REGION }}
+        continue-on-error: true   # cluster may already be gone
+
+      - name: Uninstall Helm releases
+        run: |
+          helm uninstall game-service   --namespace game-dev      || true
+          helm uninstall monitoring     --namespace monitoring     || true
+          helm uninstall loki           --namespace logging        || true
+          helm uninstall external-secrets --namespace external-secrets || true
+        continue-on-error: true
+
+      - name: Delete Kubernetes namespaces
+        run: |
+          kubectl delete namespace game-dev         --ignore-not-found
+          kubectl delete namespace monitoring        --ignore-not-found
+          kubectl delete namespace logging           --ignore-not-found
+          kubectl delete namespace external-secrets  --ignore-not-found
+          
+          # Wait for NLBs to be deprovisioned before destroying VPC
+          echo "Waiting 30s for load balancers to be removed..."
+          sleep 30
+        continue-on-error: true
+
+      # ── Step 2: Force delete ECR images ──────────────────────
+      # Terraform can't destroy ECR repos with images unless force_delete=true
+      - name: Delete ECR images
+        run: |
+          REPO="cloudops-dev-game-service"
+          IMAGE_IDS=$(aws ecr list-images \
+            --repository-name $REPO \
+            --region ${{ env.REGION }} \
+            --query 'imageIds[*]' \
+            --output json 2>/dev/null || echo "[]")
+          
+          if [ "$IMAGE_IDS" != "[]" ] && [ -n "$IMAGE_IDS" ]; then
+            aws ecr batch-delete-image \
+              --repository-name $REPO \
+              --region ${{ env.REGION }} \
+              --image-ids "$IMAGE_IDS" || true
+          fi
+        continue-on-error: true
+
+      # ── Step 3: Force delete secrets ──────────────────────────
+      # Secrets with pending deletion block re-creation for 7 days
+      - name: Force delete Secrets Manager secrets
+        run: |
+          for secret in \
+            cloudops-dev-postgres-secret \
+            cloudops-dev-redis-secret; do
+            aws secretsmanager delete-secret \
+              --secret-id $secret \
+              --force-delete-without-recovery \
+              --region ${{ env.REGION }} 2>/dev/null || true
+          done
+        continue-on-error: true
+
+      # ── Step 4: Terraform destroy ─────────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -47,5 +112,3 @@ jobs:
           TF_VAR_admin_iam_principal_arn: ${{ secrets.ADMIN_IAM_PRINCIPAL_ARN }}
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
-
-        

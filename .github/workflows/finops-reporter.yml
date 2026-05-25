@@ -21,6 +21,17 @@ jobs:
           role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+         python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install boto3
+
+      - name: Run cost report
+        run: python3 finops/automation/automation-cost-report.py
+
       - name: Run cost report
         run: python3 finops/automation/automation-cost-report.py
 

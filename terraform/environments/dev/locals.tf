@@ -40,6 +40,8 @@ locals {
   # IRSA
   irsa_game_role    = "${local.base}-game-irsa-role"
   irsa_game_policy  = "${local.base}-game-secretsmanager-policy"
+  irsa_eso_role    = "${local.base}-eso-irsa-role"
+  irsa_eso_policy  = "${local.base}-eso-secretsmanager-policy"
 
   common_tags = {
     Environment = local.env

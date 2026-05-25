@@ -42,13 +42,24 @@ jobs:
       # ── Step 1: Install ESO first ─────────────────────────────
       - name: Install External Secrets Operator
         run: |
-          helm repo add external-secrets https://charts.external-secrets.io
-          helm repo update
+          ESO_ROLE_ARN=$(cd terraform/environments/dev && terraform output -raw irsa_eso_role_arn)
+    
           helm upgrade --install external-secrets external-secrets/external-secrets \
             --namespace external-secrets \
             --create-namespace \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ESO_ROLE_ARN \
             --wait \
             --timeout 3m
+
+      - name: Install metrics-server
+        run: |
+          helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+          helm repo update
+          helm upgrade --install metrics-server metrics-server/metrics-server \
+            --namespace kube-system \
+            --set args[0]="--kubelet-insecure-tls" \
+            --wait \
+            --timeout 2m
 
       # ── Step 2: Wait for CRDs then apply ClusterSecretStore ───
       - name: Apply ClusterSecretStore
@@ -89,7 +100,7 @@ jobs:
             --values configs/dev/values-game-service.yaml \
             --set image.repository=234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service \
             --set image.tag=${{ env.IMAGE_TAG }} \
-            --atomic \
+            # --atomic \
             --timeout 5m \
             --cleanup-on-fail
 

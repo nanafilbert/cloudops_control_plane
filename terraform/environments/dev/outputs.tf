@@ -21,3 +21,7 @@ output "ecr_game_repo_url"   { value = module.ecr_game.repository_url }
 
 # ── IRSA ─────────────────────────────────────────────────────────
 output "irsa_game_role_arn"  { value = module.irsa_game.role_arn }
+
+output "irsa_eso_role_arn" {
+  value = module.irsa_eso.role_arn
+}
