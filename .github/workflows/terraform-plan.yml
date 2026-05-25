@@ -15,6 +15,8 @@ permissions:
   contents: read
   pull-requests: write
 
+  #
+
 jobs:
   test-game-service:
     name: "Test Django Game Service"
