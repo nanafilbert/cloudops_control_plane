@@ -8,7 +8,7 @@ image:
 service:
   type: ClusterIP
   port: 80
-  targetPort: 8080
+  targetPort: 8000
 
 ingress:
   enabled: false
@@ -24,7 +24,9 @@ resources:
     memory: "512Mi"
     cpu: "500m"
 
-env: []
+env: 
+  - name: ALLOWED_HOSTS
+    value: "*"
 
 autoscaling:
   enabled: true
