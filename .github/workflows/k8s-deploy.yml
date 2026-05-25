@@ -49,7 +49,7 @@ jobs:
              --create-namespace \
              --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.ESO_IRSA_ROLE_ARN }} \
              --wait \
-             --timeout 3mm
+             --timeout 3m
 
       - name: Install metrics-server
         run: |
