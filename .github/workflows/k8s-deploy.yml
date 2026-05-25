@@ -72,7 +72,7 @@ jobs:
              sleep 5
            done
 
-          kubectl apply -f kubernetes/overlays/dev/external-secrets.yaml
+          kubectl apply -f kubernetes/overlays/dev/externalsecret-redis.yaml
           kubectl apply -k kubernetes/overlays/dev
 
       - name: Deploy helm charts

@@ -30,10 +30,12 @@ variable "db_name" {
 description = "Name of the database"
 type = string 
 }
+
 variable "db_username"              { 
 description = "Username for the database user"
 type = string 
 }
+
 variable "security_group_id"        { 
 description = "ID of the security group for the DB instance"
 type = string 
