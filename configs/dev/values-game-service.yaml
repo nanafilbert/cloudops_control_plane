@@ -10,7 +10,23 @@ image:
 service:
   type: LoadBalancer
   port: 80
-  targetPort: 8080
+  targetPort: 8000
+
+livenessProbe:
+  httpGet:
+    path: /
+  initialDelaySeconds: 40
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+  initialDelaySeconds: 30
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
 
 ingress:
   enabled: false
@@ -20,10 +36,10 @@ ingress:
 
 resources:
   requests:
-    memory: "64Mi"
+    memory: "128Mi"
     cpu: "50m"
   limits:
-    memory: "256Mi"
+    memory: "512Mi"
     cpu: "200m"
 
 env:
