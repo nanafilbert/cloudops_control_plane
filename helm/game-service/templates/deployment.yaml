@@ -25,16 +25,14 @@ spec:
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
         livenessProbe:
-          httpGet:
-            path: {{ .Values.livenessProbe.path | default "/health" }}
+          tcpSocket:
             port: {{ .Values.service.targetPort }}
-          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 30 }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 40 }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 10 }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
         readinessProbe:
-          httpGet:
-            path: {{ .Values.readinessProbe.path | default "/ready" }}
+          tcpSocket:
             port: {{ .Values.service.targetPort }}
-          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 15 }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 30 }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 10 }}
           failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
