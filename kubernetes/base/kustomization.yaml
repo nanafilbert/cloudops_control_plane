@@ -1,10 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: game
+namespace: game-dev
 
 resources:
   - namespace.yaml
+  - externalsecret-redis.yaml
   - network-policies/default-deny.yaml
   - network-policies/allow-ingress-from-nginx.yaml
   - network-policies/allow-egress-to-rds-dns.yaml

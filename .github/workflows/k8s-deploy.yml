@@ -89,7 +89,7 @@ jobs:
           kubectl wait externalsecret/game-redis-credentials \
             --for=condition=Ready \
             --namespace game-dev \
-            --timeout=60s || true   # non-fatal — pod will wait too
+            --timeout=120s    # non-fatal — pod will wait too
 
       # ── Step 5: Deploy game service ───────────────────────────
       - name: Deploy game-service
@@ -103,6 +103,14 @@ jobs:
             --timeout 5m \
             --cleanup-on-fail
 
+      - name: Update EKS Deployment
+
+        run: |
+
+          aws eks update-kubeconfig --name cloudops-dev-eks-cluster --region ${{ env.AWS_REGION }}
+
+          kubectl rollout restart deployment/game-service -n dev
+
       # ── Step 6: Deploy monitoring stack ───────────────────────
       - name: Deploy monitoring stack
         run: |
@@ -115,14 +123,14 @@ jobs:
             --create-namespace \
             --values kubernetes/monitoring/prometheus-values.yaml \
             --atomic \
-            --timeout 10m
+            --timeout 20m
 
           helm upgrade --install loki grafana/loki-stack \
             --namespace logging \
             --create-namespace \
             --values kubernetes/monitoring/loki-values.yaml \
             --atomic \
-            --timeout 5m
+            --timeout 20m
 
           kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
           kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
