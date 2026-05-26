@@ -5,7 +5,7 @@ namespace: game-dev
 
 resources:
   - namespace.yaml
-  - externalsecret-redis.yaml
+
   - network-policies/default-deny.yaml
   - network-policies/allow-ingress-from-nginx.yaml
   - network-policies/allow-egress-to-rds-dns.yaml
