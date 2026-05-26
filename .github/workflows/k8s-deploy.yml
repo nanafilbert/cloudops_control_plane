@@ -109,7 +109,7 @@ jobs:
 
           aws eks update-kubeconfig --name cloudops-dev-eks-cluster --region ${{ env.AWS_REGION }}
 
-          kubectl rollout restart deployment/game-service -n dev
+          kubectl rollout restart deployment/game-service -n game-dev
 
       # ── Step 6: Deploy monitoring stack ───────────────────────
       - name: Deploy monitoring stack
