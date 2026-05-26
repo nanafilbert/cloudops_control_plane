@@ -6,7 +6,7 @@ grafana:
     dashboards:
       enabled: false  # we use configmaps instead of files for dashboards
     datasources:
-      enabled: true
+      enabled: false
   resources:
     requests:
       memory: 64Mi
