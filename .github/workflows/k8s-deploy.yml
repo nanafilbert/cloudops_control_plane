@@ -18,13 +18,12 @@ jobs:
       ENV: dev
       CLUSTER_NAME: cloudops-dev-eks-cluster
       REGION: us-east-1
-      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}  # ← correct SHA
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           submodules: recursive
 
       - name: Configure AWS Credentials
@@ -39,29 +38,27 @@ jobs:
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.REGION }}
 
-      # ── Step 1: Install ESO first ─────────────────────────────
+      # ── Resolve image tag ─────────────────────────────────────
+      # Use latest — always points to last successfully built image.
+      # Config-only changes redeploy the same image with updated config.
+      # App changes build a new image tagged latest before this runs.
+      - name: Resolve image tag
+        run: |
+          echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+
+      # ── Install ESO ───────────────────────────────────────────
       - name: Install External Secrets Operator
         run: |
-           helm repo add external-secrets https://charts.external-secrets.io
-           helm repo update
-           helm upgrade --install external-secrets external-secrets/external-secrets \
-             --namespace external-secrets \
-             --create-namespace \
-             --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.ESO_IRSA_ROLE_ARN }} \
-             --wait \
-             --timeout 3m
-
-      - name: Install metrics-server
-        run: |
-          helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+          helm repo add external-secrets https://charts.external-secrets.io
           helm repo update
-          helm upgrade --install metrics-server metrics-server/metrics-server \
-            --namespace kube-system \
-            --set args[0]="--kubelet-insecure-tls" \
+          helm upgrade --install external-secrets external-secrets/external-secrets \
+            --namespace external-secrets \
+            --create-namespace \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.ESO_IRSA_ROLE_ARN }} \
             --wait \
-            --timeout 2m
+            --timeout 3m
 
-      # ── Step 2: Wait for CRDs then apply ClusterSecretStore ───
+      # ── Wait for CRDs then apply ClusterSecretStore ───────────
       - name: Apply ClusterSecretStore
         run: |
           kubectl wait --for=condition=established \
@@ -73,25 +70,41 @@ jobs:
           rm -rf ~/.kube/cache/discovery/
 
           for i in {1..5}; do
-            kubectl apply -f kubernetes/base/cluster-secret-store.yaml && break
+            kubectl apply -f kubernetes/base/cluster-secret-store.yaml && \
+            echo "ClusterSecretStore applied" && break
             echo "Attempt $i failed, retrying in 10s..."
             sleep 10
+            if [ $i -eq 5 ]; then
+              echo "Failed after 5 attempts"
+              exit 1
+            fi
           done
 
-      # ── Step 3: Apply Kustomize overlays (after ESO is ready) ─
+      # ── Apply Kustomize overlays ──────────────────────────────
       - name: Apply Kustomize overlays
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
-      # ── Step 4: Wait for ExternalSecret to sync ───────────────
+      # ── Wait for Redis secret to sync ─────────────────────────
       - name: Wait for secrets to sync
         run: |
           kubectl wait externalsecret/game-redis-credentials \
             --for=condition=Ready \
             --namespace game-dev \
-            --timeout=120s    # non-fatal — pod will wait too
+            --timeout=60s || true
 
-      # ── Step 5: Deploy game service ───────────────────────────
+      # ── Install metrics-server ────────────────────────────────
+      - name: Install metrics-server
+        run: |
+          helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+          helm repo update
+          helm upgrade --install metrics-server metrics-server/metrics-server \
+            --namespace kube-system \
+            --set args[0]="--kubelet-insecure-tls" \
+            --wait \
+            --timeout 2m
+
+      # ── Deploy game-service ───────────────────────────────────
       - name: Deploy game-service
         run: |
           helm upgrade --install game-service ./helm/game-service \
@@ -100,18 +113,11 @@ jobs:
             --values configs/dev/values-game-service.yaml \
             --set image.repository=234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service \
             --set image.tag=${{ env.IMAGE_TAG }} \
+            --atomic \
             --timeout 5m \
             --cleanup-on-fail
 
-      - name: Update EKS Deployment
-
-        run: |
-
-          aws eks update-kubeconfig --name cloudops-dev-eks-cluster --region ${{ env.AWS_REGION }}
-
-          kubectl rollout restart deployment/game-service -n game-dev
-
-      # ── Step 6: Deploy monitoring stack ───────────────────────
+      # ── Deploy monitoring stack ───────────────────────────────
       - name: Deploy monitoring stack
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -122,20 +128,21 @@ jobs:
             --namespace monitoring \
             --create-namespace \
             --values kubernetes/monitoring/prometheus-values.yaml \
-            --atomic \
-            --timeout 20m
+            --timeout 10m \
+            --cleanup-on-fail
+            # no --atomic — keeps pods alive if timeout so we can inspect
 
           helm upgrade --install loki grafana/loki-stack \
             --namespace logging \
             --create-namespace \
             --values kubernetes/monitoring/loki-values.yaml \
-            --atomic \
-            --timeout 20m
+            --timeout 5m \
+            --cleanup-on-fail || true   # non-fatal
 
           kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
           kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
 
-      # ── Step 7: Health check ───────────────────────────────────
+      # ── Health check ──────────────────────────────────────────
       - name: Health check
         run: |
           kubectl wait pod \
@@ -144,7 +151,7 @@ jobs:
             --namespace game-dev \
             --timeout=120s
 
-      # ── Always: Debug on failure ───────────────────────────────
+      # ── Debug on failure ──────────────────────────────────────
       - name: Debug pod status
         if: failure()
         run: |
@@ -156,3 +163,8 @@ jobs:
           kubectl describe externalsecret -n game-dev
           echo "=== game-service pod logs ==="
           kubectl logs -l app=game-service -n game-dev --tail=50 || true
+          echo "=== monitoring events ==="
+          kubectl get events -n monitoring --sort-by='.lastTimestamp' | tail -20 || true
+          echo "=== prometheus logs ==="
+          kubectl logs prometheus-monitoring-kube-prometheus-prometheus-0 \
+            -n monitoring -c prometheus --tail=50 || true
