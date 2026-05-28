@@ -15,11 +15,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
+  check:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
-      game_service_changed: ${{ steps.filter.outputs.game_service }}
+      should_build: ${{ steps.decide.outputs.should_build }}
+
+    env:
+      AWS_REGION: us-east-1
+      IMAGE_NAME: cloudops-dev-game-service
 
     steps:
       - name: Checkout Code
@@ -28,6 +32,12 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
           submodules: recursive
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Detect changed paths
         id: filter
@@ -38,13 +48,41 @@ jobs:
               - 'services/game-service/**'
               - '.github/workflows/03-docker-build.yml'
 
+      - name: Check if image exists in ECR
+        id: ecr_check
+        run: |
+          if aws ecr describe-images \
+            --repository-name ${{ env.IMAGE_NAME }} \
+            --image-ids imageTag=latest \
+            --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "ECR has no image — fresh environment detected, build required"
+          fi
+
+      - name: Decide whether to build
+        id: decide
+        run: |
+          CODE_CHANGED="${{ steps.filter.outputs.game_service }}"
+          IMAGE_EXISTS="${{ steps.ecr_check.outputs.image_exists }}"
+
+          if [ "$IMAGE_EXISTS" = "false" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Reason: ECR empty (fresh environment)"
+          elif [ "$CODE_CHANGED" = "true" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Reason: game-service code changed"
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "Reason: image exists and no code changes — skipping build"
+          fi
+
   build-and-push:
     name: Build & Push Game Service
     runs-on: ubuntu-latest
-    needs: changes
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      needs.changes.outputs.game_service_changed == 'true'
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
 
     env:
       AWS_REGION: us-east-1
