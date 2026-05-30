@@ -1,0 +1,14 @@
+policies:
+  - name: unused-ebs-cleanup
+    resource: ebs
+    description: Delete unattached EBS volumes older than 7 days
+    filters:
+      - State: available          # not attached to anything
+      - type: age
+        days: 7
+        op: gt
+      - type: value
+        key: "tag:kubernetes.io/cluster/cloudops-dev-eks"
+        op: absent                # only non-EKS volumes (EKS manages its own)
+    actions:
+      - type: delete

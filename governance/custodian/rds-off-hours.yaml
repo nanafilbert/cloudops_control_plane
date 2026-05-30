@@ -1,0 +1,29 @@
+policies:
+  - name: rds-stop-off-hours
+    resource: rds
+    description: Stop RDS during off-hours to save cost
+    filters:
+      - type: value
+        key: DBInstanceIdentifier
+        value: cloudops-dev-postgres-db
+      - type: offhour
+        offhour: 20        # stop at 8pm UTC
+        onhour: 8          # start at 8am UTC
+        weekends: true     # also stop on weekends
+        default_tz: utc
+    actions:
+      - stop
+
+  - name: rds-start-on-hours
+    resource: rds
+    filters:
+      - type: value
+        key: DBInstanceIdentifier
+        value: cloudops-dev-postgres-db
+      - type: onhour
+        offhour: 20
+        onhour: 8
+        weekends: true
+        default_tz: utc
+    actions:
+      - start

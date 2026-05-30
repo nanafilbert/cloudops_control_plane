@@ -18,3 +18,8 @@ variable "admin_iam_principal_arn" {
   description = "IAM user or role ARN for EKS admin access"
   type        = string
 }
+
+variable "alert_email" {
+  description = "Email for budget alerts"
+  type        = string
+}

@@ -52,3 +52,22 @@ jobs:
           git add finops/reports/monthly.md
           git commit -m "chore: auto-update monthly FinOps report" || echo "No changes"
           git push
+
+
+      - name: Install Cloud Custodian
+        run: pip install c7n
+
+      - name: Run Custodian policies
+        run: |
+          # Only run safe read-only policies in CI — destructive ones run manually
+          custodian run \
+            --output-dir finops/reports/custodian \
+            governance/custodian/ebs-cleanup.yaml \
+            governance/custodian/unused-nlb.yaml
+
+           # RDS off-hours runs on schedule only
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            custodian run \
+              --output-dir finops/reports/custodian \
+              governance/custodian/rds-off-hours.yaml
+          fi

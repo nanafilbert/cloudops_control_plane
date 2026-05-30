@@ -1,0 +1,13 @@
+policies:
+  - name: ecr-old-image-cleanup
+    resource: ecr-image
+    description: Remove old ECR images keeping last 5 and latest
+    filters:
+      - type: image-age
+        days: 30
+      - not:
+          - type: value
+            key: imageTag
+            value: latest
+    actions:
+      - type: delete

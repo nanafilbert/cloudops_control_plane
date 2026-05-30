@@ -1,0 +1,13 @@
+policies:
+  - name: unused-nlb-cleanup
+    resource: app-elb
+    description: Remove network load balancers with no active targets
+    filters:
+      - type: value
+        key: Type
+        value: network
+      - type: target-group
+        count: 0
+        count_op: eq
+    actions:
+      - type: delete
