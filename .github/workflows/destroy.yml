@@ -24,6 +24,7 @@ jobs:
       TF_WORKING_DIR: 'terraform/environments/${{ github.event.inputs.environment }}'
       CLUSTER_NAME: cloudops-dev-eks-cluster
       REGION: us-east-1
+      ECR_REPO: cloudops-dev-game-service
 
     steps:
       - name: Checkout Code
@@ -35,62 +36,79 @@ jobs:
           role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
           aws-region: ${{ env.REGION }}
 
-      # ── Step 1: Remove Kubernetes resources first ─────────────
-      # These are not in Terraform state — must be cleaned manually
-      # or they will block VPC/subnet deletion
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      # ── Step 1: Update kubeconfig ─────────────────────────────
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig \
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.REGION }}
-        continue-on-error: true   # cluster may already be gone
+        continue-on-error: true
 
+      # ── Step 2: Uninstall all Helm releases ───────────────────
       - name: Uninstall Helm releases
         run: |
-          helm uninstall game-service   --namespace game-dev      || true
-          helm uninstall monitoring     --namespace monitoring     || true
-          helm uninstall loki           --namespace logging        || true
-          helm uninstall external-secrets --namespace external-secrets || true
+          helm uninstall game-service      --namespace game-dev           2>/dev/null || true
+          helm uninstall monitoring        --namespace monitoring          2>/dev/null || true
+          helm uninstall loki              --namespace logging             2>/dev/null || true
+          helm uninstall external-secrets  --namespace external-secrets   2>/dev/null || true
+          helm uninstall metrics-server    --namespace kube-system        2>/dev/null || true
         continue-on-error: true
 
-      - name: Delete Kubernetes namespaces
+      # ── Step 3: Delete namespaces and wait for NLB cleanup ────
+      - name: Delete namespaces
         run: |
-          kubectl delete namespace game-dev         --ignore-not-found
-          kubectl delete namespace monitoring        --ignore-not-found
-          kubectl delete namespace logging           --ignore-not-found
-          kubectl delete namespace external-secrets  --ignore-not-found
-          
-          # Wait for NLBs to be deprovisioned before destroying VPC
-          echo "Waiting 30s for load balancers to be removed..."
-          sleep 30
+          kubectl delete namespace game-dev        --ignore-not-found --wait=true
+          kubectl delete namespace monitoring       --ignore-not-found --wait=true
+          kubectl delete namespace logging          --ignore-not-found --wait=true
+          kubectl delete namespace external-secrets --ignore-not-found --wait=true
+
+          echo "Waiting 60s for NLBs and security groups to be deprovisioned..."
+          sleep 60
         continue-on-error: true
 
-      # ── Step 2: Force delete ECR images ──────────────────────
-      # Terraform can't destroy ECR repos with images unless force_delete=true
+      # ── Step 4: Delete ClusterSecretStore ─────────────────────
+      - name: Delete cluster-wide resources
+        run: |
+          kubectl delete clustersecretstore --all 2>/dev/null || true
+          kubectl delete clusterexternalsecret --all 2>/dev/null || true
+        continue-on-error: true
+
+      # ── Step 5: Delete ECR images ─────────────────────────────
       - name: Delete ECR images
         run: |
-          REPO="cloudops-dev-game-service"
-          IMAGE_IDS=$(aws ecr list-images \
-            --repository-name $REPO \
+          echo "Fetching image digests..."
+          DIGESTS=$(aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPO }} \
             --region ${{ env.REGION }} \
-            --query 'imageIds[*]' \
-            --output json 2>/dev/null || echo "[]")
-          
-          if [ "$IMAGE_IDS" != "[]" ] && [ -n "$IMAGE_IDS" ]; then
-            aws ecr batch-delete-image \
-              --repository-name $REPO \
-              --region ${{ env.REGION }} \
-              --image-ids "$IMAGE_IDS" || true
+            --query 'imageDetails[*].imageDigest' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$DIGESTS" ]; then
+            echo "No images found in ECR"
+          else
+            for digest in $DIGESTS; do
+              echo "Deleting image: $digest"
+              aws ecr batch-delete-image \
+                --repository-name ${{ env.ECR_REPO }} \
+                --region ${{ env.REGION }} \
+                --image-ids imageDigest=$digest || true
+            done
+            echo "ECR images deleted"
           fi
         continue-on-error: true
 
-      # ── Step 3: Force delete secrets ──────────────────────────
-      # Secrets with pending deletion block re-creation for 7 days
-      - name: Force delete Secrets Manager secrets
+      # ── Step 6: Force delete Secrets Manager secrets ──────────
+      - name: Force delete secrets
         run: |
           for secret in \
             cloudops-dev-postgres-secret \
             cloudops-dev-redis-secret; do
+            echo "Deleting secret: $secret"
             aws secretsmanager delete-secret \
               --secret-id $secret \
               --force-delete-without-recovery \
@@ -98,7 +116,7 @@ jobs:
           done
         continue-on-error: true
 
-      # ── Step 4: Terraform destroy ─────────────────────────────
+      # ── Step 7: Terraform destroy ─────────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -113,3 +131,25 @@ jobs:
           TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
+
+      # ── Step 8: Verify nothing left behind ────────────────────
+      - name: Verify cleanup
+        if: always()
+        run: |
+          echo "=== Remaining ECR images ==="
+          aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPO }} \
+            --region ${{ env.REGION }} 2>/dev/null || echo "Repo gone or empty"
+
+          echo "=== Remaining secrets ==="
+          aws secretsmanager list-secrets \
+            --region ${{ env.REGION }} \
+            --query 'SecretList[?contains(Name, `cloudops`)].Name' \
+            --output table 2>/dev/null || echo "None"
+
+          echo "=== Remaining EKS clusters ==="
+          aws eks list-clusters \
+            --region ${{ env.REGION }} \
+            --query 'clusters' \
+            --output table 2>/dev/null || echo "None"
+        continue-on-error: true
