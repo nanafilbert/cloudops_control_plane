@@ -6,9 +6,10 @@ on:
   pull_request:
     paths:
       - 'bootstrap/**'
-      - 'modules/**'
-      - 'terraform/env/**'
+      - 'terraform/modules/**'
+      - 'terraform/environments/**'
       - 'services/**'
+      - '.github/workflows/**'
 
 permissions:
   id-token: write
@@ -109,8 +110,7 @@ jobs:
             --repo ${{ github.repository }} \
             --github-token ${{ secrets.GITHUB_TOKEN }} \
             --pull-request ${{ github.event.pull_request.number }} \
-            --behavior update   # updates existing comment instead of spamming new ones
-
+            --behavior update  
       - name: Infracost breakdown (push to main — no PR)
         if: github.event_name == 'push'
         run: |
@@ -118,10 +118,6 @@ jobs:
             --path ${{ env.TF_WORKING_DIR }} \
             --format table \
             --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
-
-      - name: Generate Infracost JSON
-        run: infracost breakdown --path ${{ env.TF_WORKING_DIR }} --format json --out-file /tmp/infracost.json
-
       - name: Terraform Plan
         id: plan
         env:
