@@ -110,5 +110,6 @@ jobs:
         env:
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_admin_iam_principal_arn: ${{ secrets.ADMIN_IAM_PRINCIPAL_ARN }}
+          TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
