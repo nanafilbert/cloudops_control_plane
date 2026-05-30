@@ -1,22 +1,27 @@
 name: "FinOps Reporter"
 
 on:
-  
   schedule:
-    - cron: '0 0 1 * *'   # 1st day of every month at midnight UTC
+    - cron: '0 8 1 * *'    # 1st of every month at 8am UTC
   workflow_dispatch:
 
 permissions:
   id-token: write
-  contents: write   # if you want to auto-commit the report
+  contents: write
 
 jobs:
   report:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
 
-      - uses: aws-actions/configure-aws-credentials@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
           aws-region: us-east-1
@@ -24,17 +29,34 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-         python-version: '3.11'
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install boto3
+        run: pip install boto3 python-dateutil c7n
 
+      # ── Cost Report ───────────────────────────────────────────
       - name: Run cost report
         run: python3 finops/automation/automation-cost-report.py
 
-      - name: Run cost report
-        run: python3 finops/automation/automation-cost-report.py
+      # ── Cloud Custodian ───────────────────────────────────────
+      - name: Run Custodian — safe read-only policies
+        run: |
+          custodian run \
+            --output-dir finops/reports/custodian \
+            governance/custodian/ebs-cleanup.yaml \
+            governance/custodian/unused-nlb.yaml \
+            governance/custodian/ecr-image-cleanup.yaml
+        continue-on-error: true    # don't fail the whole report if custodian finds nothing
 
+      - name: Run Custodian — RDS off-hours (schedule only)
+        if: github.event_name == 'schedule'
+        run: |
+          custodian run \
+            --output-dir finops/reports/custodian \
+            governance/custodian/rds-off-hours.yaml
+        continue-on-error: true
+
+      # ── Upload artifacts ──────────────────────────────────────
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -42,32 +64,23 @@ jobs:
           path: |
             cost-report.json
             finops/reports/monthly.md
+            finops/reports/custodian/
 
-      # Optional: auto-commit the monthly.md back to repo
-      - name: Commit monthly report
-        if: github.event_name == 'schedule'
+      # ── Commit everything back to repo ────────────────────────
+      - name: Commit reports to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add finops/reports/monthly.md
-          git commit -m "chore: auto-update monthly FinOps report" || echo "No changes"
-          git push
 
+          git add \
+            finops/reports/monthly.md \
+            cost-report.json \
+            finops/reports/custodian/ || true
 
-      - name: Install Cloud Custodian
-        run: pip install c7n
-
-      - name: Run Custodian policies
-        run: |
-          # Only run safe read-only policies in CI — destructive ones run manually
-          custodian run \
-            --output-dir finops/reports/custodian \
-            governance/custodian/ebs-cleanup.yaml \
-            governance/custodian/unused-nlb.yaml
-
-           # RDS off-hours runs on schedule only
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            custodian run \
-              --output-dir finops/reports/custodian \
-              governance/custodian/rds-off-hours.yaml
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            MONTH=$(date +"%B %Y")
+            git commit -m "chore(finops): auto-update FinOps report for $MONTH [skip ci]"
+            git push origin main
           fi
