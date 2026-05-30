@@ -16,8 +16,6 @@ permissions:
   contents: read
   pull-requests: write
 
-  #
-
 jobs:
   test-game-service:
     name: "Test Django Game Service"
@@ -51,8 +49,11 @@ jobs:
       TF_VAR_github_oidc_role_arn: ${{ secrets.GH_OIDC_ROLE_ARN }}
       TF_VAR_admin_iam_principal_arn: ${{ secrets.ADMIN_IAM_PRINCIPAL_ARN }}
       TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -68,7 +69,7 @@ jobs:
       - name: Checkov Scan
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: terraform/modules
+          directory: terraform/Modules
           config_file: governance/checkov/checkov.yaml
           framework: terraform
           soft_fail: true
@@ -81,16 +82,23 @@ jobs:
       - name: Infracost baseline (base branch)
         if: github.event_name == 'pull_request'
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git checkout ${{ github.base_ref }}
-          
+          # Run on PR branch first (already checked out)
           infracost breakdown \
             --path ${{ env.TF_WORKING_DIR }} \
             --format json \
-            --out-file /tmp/infracost-base.json \
-            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
-          
-          git checkout ${{ github.head_ref }}
+            --out-file /tmp/infracost-pr.json || true
+
+          # Switch to base branch for comparison
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+          infracost breakdown \
+            --path ${{ env.TF_WORKING_DIR }} \
+            --format json \
+            --out-file /tmp/infracost-base.json || true
+
+          # Return to PR commit using SHA
+          git checkout ${{ github.event.pull_request.head.sha }}
 
       - name: Infracost diff (PR branch)
         if: github.event_name == 'pull_request'
@@ -99,8 +107,7 @@ jobs:
             --path ${{ env.TF_WORKING_DIR }} \
             --format json \
             --compare-to /tmp/infracost-base.json \
-            --out-file /tmp/infracost-diff.json \
-            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
+            --out-file /tmp/infracost-diff.json || true
 
       - name: Post Infracost comment on PR
         if: github.event_name == 'pull_request'
@@ -110,18 +117,17 @@ jobs:
             --repo ${{ github.repository }} \
             --github-token ${{ secrets.GITHUB_TOKEN }} \
             --pull-request ${{ github.event.pull_request.number }} \
-            --behavior update  
-      - name: Infracost breakdown (push to main — no PR)
+            --behavior update
+
+      - name: Infracost breakdown (push to main)
         if: github.event_name == 'push'
         run: |
           infracost breakdown \
             --path ${{ env.TF_WORKING_DIR }} \
-            --format table \
-            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
+            --format table || true
+
       - name: Terraform Plan
         id: plan
-        env:
-          TF_VAR_github_oidc_role_arn: ${{ secrets.GH_OIDC_ROLE_ARN }}
         run: terraform plan -no-color -out=tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
@@ -141,7 +147,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const planOutput = fs.readFileSync('terraform/env/dev/tfplan.txt', 'utf8');
+            const planOutput = fs.readFileSync('terraform/environments/dev/tfplan.txt', 'utf8');
             const comment = `## Terraform Plan 📖\n\`\`\`\n${planOutput.slice(0, 65000)}\n\`\`\`\n\n*Django tests passed ✅ | Checkov & Infracost in logs*`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -149,5 +155,3 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-
-            # Optionally, you could also create a check run with the plan output instead of a comment for better visibility in the PR checks tab.
