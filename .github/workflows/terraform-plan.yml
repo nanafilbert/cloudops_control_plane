@@ -69,7 +69,7 @@ jobs:
       - name: Checkov Scan
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: terraform/Modules
+          directory: terraform/modules
           config_file: governance/checkov/checkov.yaml
           framework: terraform
           soft_fail: true
