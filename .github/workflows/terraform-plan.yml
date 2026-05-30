@@ -77,6 +77,48 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
+      - name: Infracost baseline (base branch)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout ${{ github.base_ref }}
+          
+          infracost breakdown \
+            --path ${{ env.TF_WORKING_DIR }} \
+            --format json \
+            --out-file /tmp/infracost-base.json \
+            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
+          
+          git checkout ${{ github.head_ref }}
+
+      - name: Infracost diff (PR branch)
+        if: github.event_name == 'pull_request'
+        run: |
+          infracost diff \
+            --path ${{ env.TF_WORKING_DIR }} \
+            --format json \
+            --compare-to /tmp/infracost-base.json \
+            --out-file /tmp/infracost-diff.json \
+            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
+
+      - name: Post Infracost comment on PR
+        if: github.event_name == 'pull_request'
+        run: |
+          infracost comment github \
+            --path /tmp/infracost-diff.json \
+            --repo ${{ github.repository }} \
+            --github-token ${{ secrets.GITHUB_TOKEN }} \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --behavior update   # updates existing comment instead of spamming new ones
+
+      - name: Infracost breakdown (push to main — no PR)
+        if: github.event_name == 'push'
+        run: |
+          infracost breakdown \
+            --path ${{ env.TF_WORKING_DIR }} \
+            --format table \
+            --terraform-var-file ${{ env.TF_WORKING_DIR }}/terraform.tfvars || true
+
       - name: Generate Infracost JSON
         run: infracost breakdown --path ${{ env.TF_WORKING_DIR }} --format json --out-file /tmp/infracost.json
 

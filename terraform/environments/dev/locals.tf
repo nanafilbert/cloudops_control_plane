@@ -47,5 +47,6 @@ locals {
     Environment = local.env
     Project     = "cloudops-control-plane"
     ManagedBy   = "Terraform"
+    CostCenter   = "engineering"
   }
 }
