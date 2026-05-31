@@ -43,16 +43,22 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}  # Ensure this token has permissions to access artifacts
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Force delete pending secrets
+      - name: Handle existing secrets
         run: |
-          for secret in cloudops-dev-redis-secret cloudops-dev-postgres-secret; do
-            aws secretsmanager describe-secret \
+          for secret in cloudops-dev-postgres-secret cloudops-dev-redis-secret; do
+     
+            STATUS=$(aws secretsmanager describe-secret \
               --secret-id $secret \
-              --region us-east-1 2>/dev/null && \
-            aws secretsmanager delete-secret \
-              --secret-id $secret \
-              --force-delete-without-recovery \
-              --region us-east-1 || true   # ← already has || true, fine
+              --region us-east-1 \
+              --query 'DeletedDate' \
+              --output text 2>/dev/null || echo "NOT_FOUND")
+      
+           if [ "$STATUS" != "None" ] && [ "$STATUS" != "NOT_FOUND" ]; then
+             echo "Secret $secret is in pending deletion — restoring"
+             aws secretsmanager restore-secret \
+               --secret-id $secret \
+               --region us-east-1 || true
+           fi
           done
 
       - name: Terraform Apply

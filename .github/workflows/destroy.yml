@@ -52,29 +52,58 @@ jobs:
       # ── Step 2: Uninstall all Helm releases ───────────────────
       - name: Uninstall Helm releases
         run: |
-          helm uninstall game-service      --namespace game-dev           2>/dev/null || true
-          helm uninstall monitoring        --namespace monitoring          2>/dev/null || true
-          helm uninstall loki              --namespace logging             2>/dev/null || true
-          helm uninstall external-secrets  --namespace external-secrets   2>/dev/null || true
-          helm uninstall metrics-server    --namespace kube-system        2>/dev/null || true
+          helm uninstall game-service      --namespace game-dev          2>/dev/null || true
+          helm uninstall monitoring        --namespace monitoring         2>/dev/null || true
+          helm uninstall loki              --namespace logging            2>/dev/null || true
+          helm uninstall external-secrets  --namespace external-secrets  2>/dev/null || true
+          helm uninstall metrics-server    --namespace kube-system       2>/dev/null || true
         continue-on-error: true
 
-      # ── Step 3: Delete namespaces and wait for NLB cleanup ────
+      # ── Step 3: Remove finalizers and delete namespaces ───────
       - name: Delete namespaces
         run: |
-          kubectl delete namespace game-dev        --ignore-not-found --wait=true
-          kubectl delete namespace monitoring       --ignore-not-found --wait=true
-          kubectl delete namespace logging          --ignore-not-found --wait=true
-          kubectl delete namespace external-secrets --ignore-not-found --wait=true
+
+          for ns in game-dev monitoring logging external-secrets; do
+            kubectl get externalsecret -n $ns -o name 2>/dev/null | \
+              xargs -I {} kubectl patch {} -n $ns \
+                --type=merge -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+
+           
+            kubectl get pvc -n $ns -o name 2>/dev/null | \
+              xargs -I {} kubectl patch {} -n $ns \
+                --type=merge -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+          done
+
+         
+          kubectl delete namespace game-dev        --ignore-not-found --timeout=60s || true
+          kubectl delete namespace monitoring       --ignore-not-found --timeout=60s || true
+          kubectl delete namespace logging          --ignore-not-found --timeout=60s || true
+          kubectl delete namespace external-secrets --ignore-not-found --timeout=60s || true
+
+          
+          for ns in game-dev monitoring logging external-secrets; do
+            STATUS=$(kubectl get namespace $ns \
+              -o jsonpath='{.status.phase}' 2>/dev/null || echo "gone")
+            if [ "$STATUS" = "Terminating" ]; then
+              echo "Force-removing finalizers from namespace $ns"
+              kubectl get namespace $ns -o json | \
+                python3 -c "
+                import json, sys
+                ns = json.load(sys.stdin)
+                ns['spec']['finalizers'] = []
+                print(json.dumps(ns))
+                " | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - || true
+            fi
+          done
 
           echo "Waiting 60s for NLBs and security groups to be deprovisioned..."
           sleep 60
         continue-on-error: true
 
-      # ── Step 4: Delete ClusterSecretStore ─────────────────────
+      # ── Step 4: Delete cluster-wide resources ─────────────────
       - name: Delete cluster-wide resources
         run: |
-          kubectl delete clustersecretstore --all 2>/dev/null || true
+          kubectl delete clustersecretstore --all    2>/dev/null || true
           kubectl delete clusterexternalsecret --all 2>/dev/null || true
         continue-on-error: true
 
@@ -151,5 +180,12 @@ jobs:
           aws eks list-clusters \
             --region ${{ env.REGION }} \
             --query 'clusters' \
+            --output table 2>/dev/null || echo "None"
+
+          echo "=== Remaining VPCs ==="
+          aws ec2 describe-vpcs \
+            --region ${{ env.REGION }} \
+            --filters "Name=tag:Project,Values=cloudops-control-plane" \
+            --query 'Vpcs[*].{ID:VpcId,Name:Tags[?Key==`Name`]|[0].Value}' \
             --output table 2>/dev/null || echo "None"
         continue-on-error: true
