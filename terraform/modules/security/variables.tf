@@ -23,3 +23,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "eks_cluster_security_group_id" {
+  description = "EKS cluster security group ID — auto-created by EKS, attached to all nodes"
+  type        = string
+}
