@@ -8,7 +8,7 @@ image:
   pullPolicy: Always
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
   targetPort: 8000
 
@@ -43,6 +43,9 @@ resources:
     cpu: "200m"
 
 env:
+  - name: DJANGO_ALLOWED_HOSTS
+    value: "therealblessing.com,www.therealblessing.com"
+
   - name: DB_SECRET_NAME
     value: "cloudops-dev-postgres-secret"
   - name: DB_REGION

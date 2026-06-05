@@ -171,3 +171,19 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_email_addresses = [var.alert_email]
   }
 }
+
+
+resource "aws_acm_certificate" "game" {
+  domain_name               = "therealblessing.com"
+  subject_alternative_names = ["www.therealblessing.com"]
+  validation_method         = "DNS"
+
+  tags = merge(local.common_tags, {
+    Name = "${local.base}-acm-cert"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+

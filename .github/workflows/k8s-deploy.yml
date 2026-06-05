@@ -104,6 +104,29 @@ jobs:
             --wait \
             --timeout 2m
 
+
+
+      - name: Install ingress-nginx
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ secrets.ACM_CERT_ARN }} \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-ports"=443 \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=tcp \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-cross-zone-load-balancing-enabled"=true \
+            --set controller.config.proxy-read-timeout=3600 \
+            --set controller.config.proxy-send-timeout=3600 \
+            --set controller.resources.requests.memory=128Mi \
+            --set controller.resources.limits.memory=256Mi \
+            --wait \
+            --timeout 3m
+
       # ── Deploy game-service ───────────────────────────────────
       - name: Deploy game-service
         run: |

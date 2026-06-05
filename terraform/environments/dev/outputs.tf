@@ -25,3 +25,11 @@ output "irsa_game_role_arn"  { value = module.irsa_game.role_arn }
 output "irsa_eso_role_arn" {
   value = module.irsa_eso.role_arn
 }
+
+output "acm_certificate_arn" {
+  value = aws_acm_certificate.game.arn
+}
+
+output "acm_validation_records" {
+  value = aws_acm_certificate.game.domain_validation_options
+}

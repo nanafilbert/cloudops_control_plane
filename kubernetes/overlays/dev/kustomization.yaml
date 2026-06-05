@@ -6,3 +6,4 @@ namespace: game-dev
 resources:
   - ../../base
   - externalsecret-redis.yaml
+  - ingress.yaml
