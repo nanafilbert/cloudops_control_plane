@@ -1,4 +1,4 @@
-# System Architecture
+# System Architecture  
 
 ## High-Level Traffic Flow
 [User] → Route53 → ALB → Ingress-Nginx → K8s Service (ClusterIP) → Game Pods → RDS (PostgreSQL)
