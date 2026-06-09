@@ -124,8 +124,27 @@ jobs:
             --set controller.config.proxy-send-timeout=3600 \
             --set controller.resources.requests.memory=128Mi \
             --set controller.resources.limits.memory=256Mi \
-            --wait \
-            --timeout 3m
+            --timeout 8m      # ← increased from 3m
+      
+      - name: Wait for ingress-nginx NLB
+        run: |
+          echo "Waiting for ingress-nginx controller to be ready..."
+          kubectl rollout status deployment/ingress-nginx-controller \
+            -n ingress-nginx \
+            --timeout=5m
+
+          echo "Waiting for NLB to get an external IP..."
+          for i in {1..20}; do
+           EXTERNAL_IP=$(kubectl get svc ingress-nginx-controller \
+             -n ingress-nginx \
+             -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+           if [ -n "$EXTERNAL_IP" ]; then
+             echo "NLB ready: $EXTERNAL_IP"
+             break
+           fi
+           echo "Attempt $i — waiting 15s..."
+           sleep 15
+          done
 
       # ── Deploy game-service ───────────────────────────────────
       - name: Deploy game-service
