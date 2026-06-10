@@ -12,7 +12,7 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
   
 spec:
-  ingressClassName: nginx    # ← replaces the deprecated annotation
+  ingressClassName: nginx    
   rules:
     - host: game.therealblessing.com
       http:
