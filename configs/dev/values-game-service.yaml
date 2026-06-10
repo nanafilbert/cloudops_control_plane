@@ -44,7 +44,7 @@ resources:
 
 env:
   - name: DJANGO_ALLOWED_HOSTS
-    value: "therealblessing.com,www.therealblessing.com"
+    value: "game.therealblessing.com"
 
   - name: DB_SECRET_NAME
     value: "cloudops-dev-postgres-secret"

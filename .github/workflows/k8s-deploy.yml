@@ -116,6 +116,7 @@ jobs:
             --create-namespace \
             --set controller.service.type=LoadBalancer \
             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-name"=cloudops-dev-nlb \
             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ secrets.ACM_CERT_ARN }} \
             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-ports"=443 \
             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=tcp \
@@ -124,7 +125,7 @@ jobs:
             --set controller.config.proxy-send-timeout=3600 \
             --set controller.resources.requests.memory=128Mi \
             --set controller.resources.limits.memory=256Mi \
-            --timeout 8m      # ← increased from 3m
+            --timeout 8m     
       
       - name: Wait for ingress-nginx NLB
         run: |

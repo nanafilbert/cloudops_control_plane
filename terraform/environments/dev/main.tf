@@ -175,7 +175,10 @@ resource "aws_budgets_budget" "monthly" {
 
 resource "aws_acm_certificate" "game" {
   domain_name               = "therealblessing.com"
-  subject_alternative_names = ["www.therealblessing.com"]
+  subject_alternative_names = [
+    "www.therealblessing.com",
+    "*.therealblessing.com" 
+  ]
   validation_method         = "DNS"
 
   tags = merge(local.common_tags, {
