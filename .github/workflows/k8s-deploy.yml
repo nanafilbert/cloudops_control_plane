@@ -124,6 +124,14 @@ jobs:
             --wait \
             --timeout 3m
 
+      - name: Clean up stuck ingress-nginx admission jobs
+        run: |
+          kubectl delete job -n ingress-nginx \
+            $(kubectl get jobs -n ingress-nginx -o name 2>/dev/null) 2>/dev/null || true
+          kubectl delete pod -n ingress-nginx \
+            --field-selector=status.phase=Pending 2>/dev/null || true
+        continue-on-error: true
+
 
       - name: Install ingress-nginx
         run: |
