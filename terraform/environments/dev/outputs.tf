@@ -33,3 +33,7 @@ output "acm_certificate_arn" {
 output "acm_validation_records" {
   value = aws_acm_certificate.game.domain_validation_options
 }
+
+output "lbc_irsa_role_arn" {
+  value = module.lbc_irsa.role_arn
+}

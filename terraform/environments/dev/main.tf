@@ -67,8 +67,8 @@ module "eks" {
       name           = "${local.base}-eks-ng-main"
       desired_size   = 2
       min_size       = 1
-      max_size       = 2
-      instance_types = ["t4g.medium"]
+      max_size       = 3
+      instance_types = ["t4g.small"]
       ami_type       = "AL2023_ARM_64_STANDARD"
     }
   }
