@@ -57,6 +57,7 @@ jobs:
           helm uninstall loki              --namespace logging            2>/dev/null || true
           helm uninstall external-secrets  --namespace external-secrets  2>/dev/null || true
           helm uninstall metrics-server    --namespace kube-system       2>/dev/null || true
+          helm uninstall ingress-nginx     --namespace ingress-nginx     2>/dev/null || true
         continue-on-error: true
 
       # ── Step 3: Remove finalizers and delete namespaces ───────
@@ -79,7 +80,8 @@ jobs:
           kubectl delete namespace monitoring       --ignore-not-found --timeout=60s || true
           kubectl delete namespace logging          --ignore-not-found --timeout=60s || true
           kubectl delete namespace external-secrets --ignore-not-found --timeout=60s || true
-
+          kubectl delete namespace ingress-nginx     --ignore-not-found --timeout=60s || true  # ← was missing
+          sleep 60
           
           for ns in game-dev monitoring logging external-secrets; do
             STATUS=$(kubectl get namespace $ns \

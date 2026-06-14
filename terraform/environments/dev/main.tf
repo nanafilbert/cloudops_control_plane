@@ -148,6 +148,34 @@ module "irsa_eso" {
 }
 
 
+module "irsa_lbc" {
+  source = "../../Modules/iam-irsa"
+
+  role_name   = "${local.base}-lbc-irsa-role"
+  policy_name = "${local.base}-lbc-policy"
+
+  oidc_provider_arn            = module.eks.oidc_provider_arn
+  namespace                    = "kube-system"
+  service_account              = "aws-load-balancer-controller"
+  attach_secretsmanager_policy = false
+
+  tags = local.common_tags
+}
+
+# LBC needs its own specific policy — not just secretsmanager
+resource "aws_iam_role_policy_attachment" "lbc" {
+  role       = module.irsa_lbc.role_name
+  policy_arn = aws_iam_policy.lbc.arn
+}
+
+resource "aws_iam_policy" "lbc" {
+  name = "${local.base}-aws-load-balancer-controller-policy"
+
+  policy = file("${path.module}/policies/lbc-policy.json")
+
+  tags = local.common_tags
+}
+
 resource "aws_budgets_budget" "monthly" {
   name         = "${local.base}-monthly-budget"
   budget_type  = "COST"
