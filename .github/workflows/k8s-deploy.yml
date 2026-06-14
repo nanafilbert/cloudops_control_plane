@@ -115,6 +115,7 @@ jobs:
             --set clusterName=${{ env.CLUSTER_NAME }} \
             --set serviceAccount.create=true \
             --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.LBC_IRSA_ROLE_ARN }} \
+            --set replicaCount=1 \
             --set region=us-east-1 \
             --set vpcId=$(aws eks describe-cluster \
               --name ${{ env.CLUSTER_NAME }} \
@@ -126,12 +127,18 @@ jobs:
 
       - name: Clean up stuck ingress-nginx admission jobs
         run: |
-          kubectl delete job -n ingress-nginx \
-            $(kubectl get jobs -n ingress-nginx -o name 2>/dev/null) 2>/dev/null || true
-          kubectl delete pod -n ingress-nginx \
-            --field-selector=status.phase=Pending 2>/dev/null || true
+          kubectl delete jobs --all -n ingress-nginx 2>/dev/null || true
+    
+    
+          kubectl delete pods --field-selector=status.phase=Pending \
+            -n ingress-nginx 2>/dev/null || true
+    
+   
+          helm status ingress-nginx -n ingress-nginx 2>/dev/null | grep -q "failed" && \
+           helm uninstall ingress-nginx -n ingress-nginx 2>/dev/null || true
+  
+          sleep 10
         continue-on-error: true
-
 
       - name: Install ingress-nginx
         run: |
@@ -239,4 +246,4 @@ jobs:
           kubectl logs prometheus-monitoring-kube-prometheus-prometheus-0 \
             -n monitoring -c prometheus --tail=50 || true
 
-            #
+            
