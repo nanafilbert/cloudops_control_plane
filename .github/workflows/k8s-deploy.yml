@@ -238,3 +238,5 @@ jobs:
           echo "=== prometheus logs ==="
           kubectl logs prometheus-monitoring-kube-prometheus-prometheus-0 \
             -n monitoring -c prometheus --tail=50 || true
+
+            #
