@@ -149,7 +149,7 @@ module "irsa_eso" {
 
 
 module "irsa_lbc" {
-  source = "../../Modules/iam-irsa"
+  source = "../../modules/iam-irsa"
 
   role_name   = "${local.base}-lbc-irsa-role"
   policy_name = "${local.base}-lbc-policy"
@@ -162,7 +162,7 @@ module "irsa_lbc" {
   tags = local.common_tags
 }
 
-# LBC needs its own specific policy — not just secretsmanager
+
 resource "aws_iam_role_policy_attachment" "lbc" {
   role       = module.irsa_lbc.role_name
   policy_arn = aws_iam_policy.lbc.arn
