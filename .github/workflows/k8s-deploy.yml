@@ -38,15 +38,11 @@ jobs:
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.REGION }}
 
-      # ── Resolve image tag ─────────────────────────────────────
-      # Use latest — always points to last successfully built image.
-      # Config-only changes redeploy the same image with updated config.
-      # App changes build a new image tagged latest before this runs.
       - name: Resolve image tag
         run: |
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
-      # ── Install ESO ───────────────────────────────────────────
+      
       - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io
@@ -58,7 +54,6 @@ jobs:
             --wait \
             --timeout 3m
 
-      # ── Wait for CRDs then apply ClusterSecretStore ───────────
       - name: Apply ClusterSecretStore
         run: |
           kubectl wait --for=condition=established \
@@ -80,12 +75,12 @@ jobs:
             fi
           done
 
-      # ── Apply Kustomize overlays ──────────────────────────────
+      
       - name: Apply Kustomize overlays
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
-      # ── Wait for Redis secret to sync ─────────────────────────
+      
       - name: Wait for secrets to sync
         run: |
           kubectl wait externalsecret/game-redis-credentials \
@@ -93,7 +88,7 @@ jobs:
             --namespace game-dev \
             --timeout=60s || true
 
-      # ── Install metrics-server ────────────────────────────────
+      
       - name: Install metrics-server
         run: |
           helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
@@ -142,28 +137,32 @@ jobs:
 
       - name: Install ingress-nginx
         run: |
-          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-          helm repo update
+           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+           helm repo update
 
-          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-            --namespace ingress-nginx \
-            --create-namespace \
-            --set controller.service.type=LoadBalancer \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-name"=cloudops-dev-nlb \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ secrets.ACM_CERT_ARN }} \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-listen-ports"='[{"HTTP": 80}, {"HTTPS": 443}]' \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-nlb-target-type"=instance \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-cross-zone-load-balancing-enabled"=true \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=http \
-            --set controller.service.targetPorts.https=http \
-            --set controller.config.use-forwarded-headers=true \
-            --set controller.config.proxy-read-timeout=3600 \
-            --set controller.config.proxy-send-timeout=3600 \
-            --set controller.resources.requests.memory=128Mi \
-            --set controller.resources.limits.memory=256Mi \
-            --timeout 8m     
+           helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+             --namespace ingress-nginx \
+             --create-namespace \
+             --set controller.service.type=LoadBalancer \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-name"=cloudops-dev-nlb \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ secrets.ACM_CERT_ARN }} \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-listen-ports"="[{\"HTTP\":80}\,{\"HTTPS\":443}]" \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=http \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-nlb-target-type"=instance \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-cross-zone-load-balancing-enabled"=true \
+             --set controller.service.targetPorts.https=http \
+             --set controller.config.use-forwarded-headers=true \
+             --set controller.ingressClassResource.enabled=true \
+             --set controller.ingressClassResource.default=true \
+             --set controller.ingressClassResource.name=nginx \
+             --set controller.ingressClassResource.controllerValue="k8s.io/ingress-nginx" \
+             --set controller.config.proxy-read-timeout=3600 \
+             --set controller.config.proxy-send-timeout=3600 \
+             --set controller.resources.requests.memory=128Mi \
+             --set controller.resources.limits.memory=256Mi \
+             --timeout 8m
       
       - name: Wait for ingress-nginx NLB
         run: |
@@ -185,7 +184,7 @@ jobs:
            sleep 15
           done
 
-      # ── Deploy game-service ───────────────────────────────────
+      
       - name: Deploy game-service
         run: |
           helm upgrade --install game-service ./helm/game-service \
@@ -198,7 +197,7 @@ jobs:
             --timeout 5m \
             --cleanup-on-fail
 
-      # ── Deploy monitoring stack ───────────────────────────────
+      
       - name: Deploy monitoring stack
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -223,7 +222,7 @@ jobs:
           kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
           kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
 
-      # ── Health check ──────────────────────────────────────────
+     
       - name: Health check
         run: |
           kubectl wait pod \
@@ -232,7 +231,7 @@ jobs:
             --namespace game-dev \
             --timeout=120s
 
-      # ── Debug on failure ──────────────────────────────────────
+      
       - name: Debug pod status
         if: failure()
         run: |
