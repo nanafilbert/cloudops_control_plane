@@ -152,7 +152,6 @@ jobs:
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=http \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-nlb-target-type"=instance \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-cross-zone-load-balancing-enabled"=true \
-             --set controller.service.targetPorts.https=http \
              --set controller.config.use-forwarded-headers=true \
              --set controller.ingressClassResource.enabled=true \
              --set controller.ingressClassResource.default=true \
