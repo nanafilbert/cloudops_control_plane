@@ -1,4 +1,8 @@
 # kubernetes/monitoring/loki-values.yaml
+
+# 1. Target the monolithic single-container execution model
+deploymentMode: SingleBinary
+
 loki:
   auth_enabled: false
   commonConfig:
@@ -24,6 +28,35 @@ singleBinary:
     limits:
       memory: 256Mi
       cpu: 200m
+  
+  # Turn off persistent block device (EBS) dynamic allocations
+  persistence:
+    enabled: false
+
+  # 2. Inject writable memory spaces to fix the 'read-only file system' block
+  extraVolumes:
+    - name: storage
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: storage
+      mountPath: /var/loki
+
+# 3. Explicitly zero-out the distributed chart defaults to bypass validation loops
+read:
+  replicas: 1
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# 4. Strip down ancillary microservices to conserve pod slots
+gateway:
+  enabled: false
+
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
 
 monitoring:
   selfMonitoring:
