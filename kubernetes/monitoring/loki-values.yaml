@@ -1,33 +1,35 @@
+# kubernetes/monitoring/loki-values.yaml
 loki:
-  enabled: true
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+singleBinary:
+  replicas: 1
   resources:
     requests:
       memory: 128Mi
       cpu: 50m
     limits:
       memory: 256Mi
-      cpu: 100m
+      cpu: 200m
 
-promtail:
-  enabled: true
-  resources:
-    requests:
-      memory: 32Mi
-      cpu: 10m
-    limits:
-      memory: 64Mi
-      cpu: 50m
-  config:
-    clients:
-      - url: http://loki:3100/loki/api/v1/push
-    scrape_configs:
-      - job_name: kubernetes-pods
-        kubernetes_sd_configs:
-          - role: pod
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            target_label: app
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: container
+monitoring:
+  selfMonitoring:
+    enabled: false
+  lokiCanary:
+    enabled: false
+
+test:
+  enabled: false

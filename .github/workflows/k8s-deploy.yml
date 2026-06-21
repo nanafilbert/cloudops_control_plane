@@ -42,7 +42,6 @@ jobs:
         run: |
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
-      
       - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io
@@ -75,12 +74,10 @@ jobs:
             fi
           done
 
-      
       - name: Apply Kustomize overlays
         run: |
           kubectl apply -k kubernetes/overlays/${{ env.ENV }}
 
-      
       - name: Wait for secrets to sync
         run: |
           kubectl wait externalsecret/game-redis-credentials \
@@ -88,7 +85,6 @@ jobs:
             --namespace game-dev \
             --timeout=60s || true
 
-      
       - name: Install metrics-server
         run: |
           helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
@@ -98,7 +94,6 @@ jobs:
             --set args[0]="--kubelet-insecure-tls" \
             --wait \
             --timeout 2m
-    
 
       - name: Install AWS Load Balancer Controller
         run: |
@@ -123,15 +118,10 @@ jobs:
       - name: Clean up stuck ingress-nginx admission jobs
         run: |
           kubectl delete jobs --all -n ingress-nginx 2>/dev/null || true
-    
-    
           kubectl delete pods --field-selector=status.phase=Pending \
             -n ingress-nginx 2>/dev/null || true
-    
-   
           helm status ingress-nginx -n ingress-nginx 2>/dev/null | grep -q "failed" && \
            helm uninstall ingress-nginx -n ingress-nginx 2>/dev/null || true
-  
           sleep 10
         continue-on-error: true
 
@@ -167,7 +157,7 @@ jobs:
              --set controller.resources.limits.memory=256Mi \
              --set replicaCount=1 \
              --timeout 8m
-      
+
       - name: Wait for ingress-nginx NLB
         run: |
           echo "Waiting for ingress-nginx controller to be ready..."
@@ -188,7 +178,6 @@ jobs:
            sleep 15
           done
 
-      
       - name: Deploy game-service
         run: |
           helm upgrade --install game-service ./helm/game-service \
@@ -201,11 +190,9 @@ jobs:
             --timeout 5m \
             --cleanup-on-fail
 
-      
-      - name: Deploy monitoring stack
+      - name: Deploy monitoring stack (Prometheus + Grafana)
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo add grafana https://grafana.github.io/helm-charts
           helm repo update
 
           helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
@@ -216,17 +203,36 @@ jobs:
             --cleanup-on-fail
             # no --atomic — keeps pods alive if timeout so we can inspect
 
-          helm upgrade --install loki grafana/loki-stack \
+          kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
+          kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
+
+      - name: Deploy Loki (log aggregation)
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+
+          helm uninstall loki -n logging 2>/dev/null || true
+
+          helm upgrade --install loki grafana/loki \
             --namespace logging \
             --create-namespace \
             --values kubernetes/monitoring/loki-values.yaml \
             --timeout 5m \
             --cleanup-on-fail || true   # non-fatal
 
-          kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
-          kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
+      - name: Deploy Promtail (log shipping)
+        run: |
+          helm upgrade --install promtail grafana/promtail \
+            --namespace logging \
+            --create-namespace \
+            --set "config.clients[0].url=http://loki.logging.svc.cluster.local:3100/loki/api/v1/push" \
+            --set resources.requests.memory=32Mi \
+            --set resources.requests.cpu=10m \
+            --set resources.limits.memory=64Mi \
+            --set resources.limits.cpu=50m \
+            --timeout 3m \
+            --cleanup-on-fail || true   # non-fatal
 
-     
       - name: Health check
         run: |
           kubectl wait pod \
@@ -235,7 +241,6 @@ jobs:
             --namespace game-dev \
             --timeout=120s
 
-      
       - name: Debug pod status
         if: failure()
         run: |
@@ -252,5 +257,5 @@ jobs:
           echo "=== prometheus logs ==="
           kubectl logs prometheus-monitoring-kube-prometheus-prometheus-0 \
             -n monitoring -c prometheus --tail=50 || true
-
-            
+          echo "=== loki logs ==="
+          kubectl logs -n logging -l app.kubernetes.io/name=loki --tail=50 || true
