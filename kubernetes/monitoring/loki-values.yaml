@@ -43,7 +43,7 @@ singleBinary:
 
 # 3. Explicitly zero-out the distributed chart defaults to bypass validation loops
 read:
-  replicas: 1
+  replicas: 0
 write:
   replicas: 0
 backend:
