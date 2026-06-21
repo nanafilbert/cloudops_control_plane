@@ -52,7 +52,8 @@ backend:
 # 4. Strip down ancillary microservices to conserve pod slots
 gateway:
   enabled: false
-
+loki-canary:
+   enabled: false
 chunksCache:
   enabled: false
 resultsCache:
