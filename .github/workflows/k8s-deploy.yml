@@ -50,7 +50,7 @@ jobs:
             --namespace external-secrets \
             --create-namespace \
             --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.ESO_IRSA_ROLE_ARN }} \
-            --wait \
+            --atomic \
             --timeout 3m
 
       - name: Apply ClusterSecretStore
@@ -92,7 +92,7 @@ jobs:
           helm upgrade --install metrics-server metrics-server/metrics-server \
             --namespace kube-system \
             --set args[0]="--kubelet-insecure-tls" \
-            --wait \
+            --atomic \
             --timeout 2m
 
       - name: Install AWS Load Balancer Controller
@@ -112,7 +112,7 @@ jobs:
               --region us-east-1 \
               --query 'cluster.resourcesVpcConfig.vpcId' \
               --output text) \
-            --wait \
+            --atomic \
             --timeout 3m
 
       - name: Clean up stuck ingress-nginx admission jobs
@@ -156,6 +156,7 @@ jobs:
              --set controller.resources.requests.memory=128Mi \
              --set controller.resources.limits.memory=256Mi \
              --set replicaCount=1 \
+             --atomic \
              --timeout 8m
 
       - name: Wait for ingress-nginx NLB
@@ -199,9 +200,10 @@ jobs:
             --namespace monitoring \
             --create-namespace \
             --values kubernetes/monitoring/prometheus-values.yaml \
+            --atomic \
             --timeout 10m \
-            --cleanup-on-fail
-            # no --atomic — keeps pods alive if timeout so we can inspect
+            
+            
 
           kubectl apply -f kubernetes/monitoring/grafana-dashboard-game.yaml || true
           kubectl apply -f kubernetes/monitoring/prometheus-alerts.yaml || true
@@ -217,8 +219,9 @@ jobs:
             --namespace logging \
             --create-namespace \
             --values kubernetes/monitoring/loki-values.yaml \
-            --timeout 5m \
-            --cleanup-on-fail || true   # non-fatal
+            --atomic \
+            --timeout 5m || true \ 
+           
 
       - name: Deploy Promtail (log shipping)
         run: |
@@ -230,8 +233,9 @@ jobs:
             --set resources.requests.cpu=10m \
             --set resources.limits.memory=64Mi \
             --set resources.limits.cpu=50m \
-            --timeout 3m \
-            --cleanup-on-fail || true   # non-fatal
+            --atomic \
+            --timeout 3m || true \
+            
 
       - name: Health check
         run: |
