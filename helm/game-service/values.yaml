@@ -11,8 +11,8 @@ service:
   targetPort: 8000
 
 ingress:
-  enabled: false
-  host: game.example.com
+  enabled: true
+  host: game.therealblessing.com
   path: /
   pathType: Prefix
 
