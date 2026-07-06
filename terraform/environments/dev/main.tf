@@ -218,3 +218,9 @@ resource "aws_acm_certificate" "game" {
   }
 }
 
+
+
+depends_on = [
+    module.vpc
+  ]
+}
