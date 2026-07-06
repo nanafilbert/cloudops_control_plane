@@ -64,6 +64,7 @@ monitoring:
     enabled: false
   lokiCanary:
     enabled: false
+ 
 
 test:
   enabled: false
