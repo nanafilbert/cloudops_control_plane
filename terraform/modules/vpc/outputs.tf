@@ -4,9 +4,3 @@ output "private_subnet_ids" { value = aws_subnet.private[*].id }
 output "nat_gateway_ids"    { value = aws_nat_gateway.this[*].id }
 output "igw_id"             { value = aws_internet_gateway.this.id }
 
-depends_on = [
-    aws_route_table.private,
-    aws_route_table_association.private,
-    aws_nat_gateway.this
-  ]
-}
