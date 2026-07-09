@@ -16,7 +16,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
       ENV: dev
-      CLUSTER_NAME: cloudops-dev-eks-cluster
+      CLUSTER_NAME:           
       REGION: us-east-1
 
     steps:
@@ -219,6 +219,8 @@ jobs:
             --namespace logging \
             --create-namespace \
             --values kubernetes/monitoring/loki-values.yaml \
+            --set lokiCanary.enabled=false \
+            --set serviceMonitor.enabled=false \
             --atomic \
             --timeout 5m || true \ 
            
@@ -229,6 +231,7 @@ jobs:
             --namespace logging \
             --create-namespace \
             --set "config.clients[0].url=http://loki.logging.svc.cluster.local:3100/loki/api/v1/push" \
+            --set serviceMonitor.enabled=false \
             --set resources.requests.memory=32Mi \
             --set resources.requests.cpu=10m \
             --set resources.limits.memory=64Mi \

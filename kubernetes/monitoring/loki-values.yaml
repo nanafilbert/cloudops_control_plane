@@ -64,6 +64,8 @@ monitoring:
     enabled: false
   lokiCanary:
     enabled: false
+  serviceMonitor:
+    enabled: false
  
 
 test:
