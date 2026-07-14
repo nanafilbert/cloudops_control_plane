@@ -45,11 +45,16 @@ jobs:
           CERT_ARN=$(aws acm list-certificates \
             --region us-east-1 \
             --certificate-statuses ISSUED \
-            --query 'CertificateSummaryList[?DomainName==`*.therealblessing.com`].CertificateArn' \
+            --query 'CertificateSummaryList[?DomainName==`therealblessing.com`].CertificateArn | [0] ' \
             --output text)
-          [ -z "$CERT_ARN" ] && echo "ERROR: ACM cert not found" && exit 1
-          echo "ACM_CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
 
+          if [ -z "$CERT_ARN" ] || [ "$CERT_ARN" = "None" ]; then
+            echo "ERROR: Active ACM certificate for therealblessing.com not found!"
+            exit 1
+          fi
+          
+          echo "ACM_CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
+         
           
           LBC_ROLE=$(aws iam get-role \
             --role-name cloudops-dev-lbc-irsa-role \
