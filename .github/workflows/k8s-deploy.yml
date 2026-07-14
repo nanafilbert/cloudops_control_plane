@@ -38,6 +38,37 @@ jobs:
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.REGION }}
 
+      
+      - name: Resolve AWS resource ARNs
+        run: |
+   
+          CERT_ARN=$(aws acm list-certificates \
+            --region us-east-1 \
+            --certificate-statuses ISSUED \
+            --query 'CertificateSummaryList[?DomainName==`therealblessing.com`].CertificateArn' \
+            --output text)
+          [ -z "$CERT_ARN" ] && echo "ERROR: ACM cert not found" && exit 1
+          echo "ACM_CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
+
+          
+          LBC_ROLE=$(aws iam get-role \
+            --role-name cloudops-dev-lbc-irsa-role \
+            --query 'Role.Arn' \
+            --output text)
+          echo "LBC_IRSA_ROLE_ARN=$LBC_ROLE" >> $GITHUB_ENV
+
+    
+          ESO_ROLE=$(aws iam get-role \
+            --role-name cloudops-dev-eso-irsa-role \
+            --query 'Role.Arn' \
+            --output text)
+          echo "ESO_IRSA_ROLE_ARN=$ESO_ROLE" >> $GITHUB_ENV
+
+          echo "=== Resolved ARNs ==="
+          echo "ACM:  $CERT_ARN"
+          echo "LBC:  $LBC_ROLE"
+          echo "ESO:  $ESO_ROLE"
+
       - name: Resolve image tag
         run: |
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
@@ -49,7 +80,7 @@ jobs:
           helm upgrade --install external-secrets external-secrets/external-secrets \
             --namespace external-secrets \
             --create-namespace \
-            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.ESO_IRSA_ROLE_ARN }} \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ env.ESO_IRSA_ROLE_ARN }} \
             --atomic \
             --timeout 3m
 
@@ -106,7 +137,7 @@ jobs:
             --set serviceAccount.create=true \
             --set replicaCount=1 \
             --set region=${{ env.REGION }} \
-            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ secrets.LBC_IRSA_ROLE_ARN }} \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ env.LBC_IRSA_ROLE_ARN }} \
             --set vpcId=$(aws eks describe-cluster \
               --name ${{ env.CLUSTER_NAME }} \
               --region us-east-1 \
@@ -125,9 +156,10 @@ jobs:
           sleep 10
         continue-on-error: true
 
+
       - name: Install ingress-nginx
         run: |
-           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx 
            helm repo update
 
            helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
@@ -137,7 +169,7 @@ jobs:
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-name"=cloudops-dev-nlb \
-             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ secrets.ACM_CERT_ARN }} \
+             --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"=${{ env.ACM_CERT_ARN }} \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-listen-ports"="[{\"HTTPS\":443}]" \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"=http \
              --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-nlb-target-type"=instance \
