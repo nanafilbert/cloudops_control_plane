@@ -9,7 +9,7 @@ on:
 permissions:
   id-token: write
   contents: read
-
+  security-events: write   
 concurrency:
   group: docker-build-${{ github.ref }}
   cancel-in-progress: true
@@ -79,7 +79,7 @@ jobs:
           fi
 
   build-and-push:
-    name: Build & Push Game Service
+    name: Build, Scan & Push Game Service
     runs-on: ubuntu-latest
     needs: check
     if: needs.check.outputs.should_build == 'true'
@@ -118,7 +118,45 @@ jobs:
           echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
           echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
 
-      - name: Build and Push ARM64 Image
+      
+      - name: Build image for scanning (local, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/game-service
+          platforms: linux/arm64
+          push: false
+          load: true            # load into local Docker daemon for Trivy to scan
+          tags: ${{ env.IMAGE_URI }}:scan-target
+          cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
+          provenance: false
+          sbom: false
+
+      # ── Trivy scan ────────────────────────────────────────────────────────
+      # Scans the locally built image for OS package and language dependency
+      # vulnerabilities. CRITICAL and HIGH findings block the push.
+      # Results are uploaded to GitHub Security tab as SARIF for tracking.
+      - name: Scan image with Trivy
+        id: trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_URI }}:scan-target
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '1'          # fail workflow on CRITICAL or HIGH findings
+          ignore-unfixed: true    # skip vulnerabilities with no fix available yet
+          vuln-type: os,library   # scan both OS packages and Python dependencies
+          timeout: 10m
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()              # upload even if Trivy found vulnerabilities
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-container
+
+      # ── Push only if scan passed ──────────────────────────────────────────
+      - name: Build and Push ARM64 image (scan passed)
         uses: docker/build-push-action@v6
         with:
           context: ./services/game-service
@@ -135,7 +173,7 @@ jobs:
 
       - name: Image summary
         run: |
-          echo "✅ Image pushed:"
+          echo "✅ Trivy scan passed — image pushed:"
           echo "  ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}"
           echo "  ${{ env.IMAGE_URI }}:${{ env.SHORT_SHA }}"
           echo "  ${{ env.IMAGE_URI }}:latest"
