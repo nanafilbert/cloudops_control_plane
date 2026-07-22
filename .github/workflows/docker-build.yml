@@ -140,7 +140,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
-          exit-code: '1'          # fail workflow on CRITICAL or HIGH findings
+          exit-code: '1'          # fail workflow on CRITICAL or HIGH findings .
           ignore-unfixed: true    # skip vulnerabilities with no fix available yet
           vuln-type: os,library   # scan both OS packages and Python dependencies
           timeout: 10m
