@@ -143,7 +143,6 @@ jobs:
           exit-code: '1'          # fail workflow on CRITICAL or HIGH findings
           ignore-unfixed: true    # skip vulnerabilities with no fix available yet
           vuln-type: os,library   # scan both OS packages and Python dependencies
-          trivyignores: .trivyignore
           timeout: 10m
 
       - name: Upload Trivy scan results to GitHub Security
