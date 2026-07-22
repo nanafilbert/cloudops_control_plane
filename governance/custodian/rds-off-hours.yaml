@@ -1,3 +1,7 @@
+# NOTE: RDS off-hours is handled by .github/workflows/07-rds-schedule.yml
+# using native AWS CLI calls. This file documents the policy intent only.
+# Cloud Custodian Lambda mode would be required for true event-driven execution.
+
 policies:
   - name: rds-stop-off-hours
     resource: rds
@@ -7,9 +11,8 @@ policies:
         key: DBInstanceIdentifier
         value: cloudops-dev-postgres-db
       - type: offhour
-        offhour: 20        # stop at 8pm UTC
+        offhour: 22       # stop at 10pm UTC
         onhour: 8          # start at 8am UTC
-        weekends: true     # also stop on weekends
         default_tz: utc
     actions:
       - stop
@@ -21,9 +24,8 @@ policies:
         key: DBInstanceIdentifier
         value: cloudops-dev-postgres-db
       - type: onhour
-        offhour: 20
+        offhour: 22
         onhour: 8
-        weekends: true
         default_tz: utc
     actions:
       - start

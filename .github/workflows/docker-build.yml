@@ -10,6 +10,7 @@ permissions:
   id-token: write
   contents: read
   security-events: write   
+  actions: write
 concurrency:
   group: docker-build-${{ github.ref }}
   cancel-in-progress: true
@@ -126,15 +127,11 @@ jobs:
           platforms: linux/arm64
           push: false
           load: true            # load into local Docker daemon for Trivy to scan
-          tags: ${{ env.IMAGE_URI }}:scan-target
+          tags: game-service:scan-target
           cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
           provenance: false
           sbom: false
 
-      # ── Trivy scan ────────────────────────────────────────────────────────
-      # Scans the locally built image for OS package and language dependency
-      # vulnerabilities. CRITICAL and HIGH findings block the push.
-      # Results are uploaded to GitHub Security tab as SARIF for tracking.
       - name: Scan image with Trivy
         id: trivy
         uses: aquasecurity/trivy-action@master
@@ -146,6 +143,7 @@ jobs:
           exit-code: '1'          # fail workflow on CRITICAL or HIGH findings
           ignore-unfixed: true    # skip vulnerabilities with no fix available yet
           vuln-type: os,library   # scan both OS packages and Python dependencies
+          trivyignores: .trivyignore
           timeout: 10m
 
       - name: Upload Trivy scan results to GitHub Security

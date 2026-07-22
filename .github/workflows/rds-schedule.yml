@@ -1,0 +1,81 @@
+name: "RDS Off-Hours Schedule"
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   #Stop: 10pm UTC every day
+    - cron: '0 8 * * *'    # Start: 8am UTC every day
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - stop
+          - start
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rds-schedule:
+    runs-on: ubuntu-latest
+    env:
+      DB_IDENTIFIER: cloudops-dev-postgres-db
+      REGION: us-east-1
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Determine action from schedule
+        run: |
+          HOUR=$(date -u +%H)
+          DAY=$(date -u +%u)  # 1=Monday, 7=Sunday
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ACTION=${{ github.event.inputs.action }}" >> $GITHUB_ENV
+          elif [ "$HOUR" = "20" ]; then
+            echo "ACTION=stop" >> $GITHUB_ENV
+          elif [ "$HOUR" = "08" ]; then
+            echo "ACTION=start" >> $GITHUB_ENV
+          fi
+
+      - name: Check RDS current status
+        run: |
+          STATUS=$(aws rds describe-db-instances \
+            --db-instance-identifier ${{ env.DB_IDENTIFIER }} \
+            --region ${{ env.REGION }} \
+            --query 'DBInstances[0].DBInstanceStatus' \
+            --output text)
+          echo "Current RDS status: $STATUS"
+          echo "RDS_STATUS=$STATUS" >> $GITHUB_ENV
+
+      - name: Stop RDS
+        if: env.ACTION == 'stop' && env.RDS_STATUS == 'available'
+        run: |
+          echo "Stopping RDS instance ${{ env.DB_IDENTIFIER }}"
+          aws rds stop-db-instance \
+            --db-instance-identifier ${{ env.DB_IDENTIFIER }} \
+            --region ${{ env.REGION }}
+          echo "RDS stop initiated"
+
+      - name: Start RDS
+        if: env.ACTION == 'start' && env.RDS_STATUS == 'stopped'
+        run: |
+          echo "Starting RDS instance ${{ env.DB_IDENTIFIER }}"
+          aws rds start-db-instance \
+            --db-instance-identifier ${{ env.DB_IDENTIFIER }} \
+            --region ${{ env.REGION }}
+          echo "RDS start initiated"
+
+      - name: Skip (already in desired state)
+        if: |
+          (env.ACTION == 'stop' && env.RDS_STATUS != 'available') ||
+          (env.ACTION == 'start' && env.RDS_STATUS != 'stopped')
+        run: |
+          echo "RDS is already in state: ${{ env.RDS_STATUS }} — no action needed"

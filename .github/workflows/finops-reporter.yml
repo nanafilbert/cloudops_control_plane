@@ -38,22 +38,43 @@ jobs:
       - name: Run cost report
         run: python3 finops/automation/automation-cost-report.py
 
-      # ── Cloud Custodian ───────────────────────────────────────
-      - name: Run Custodian — safe read-only policies
+      # ── ECR cleanup ───────────────────────────────────────────
+      - name: Run ECR image cleanup
         run: |
+          echo "Running ECR image cleanup policy..."
           custodian run \
-            --output-dir finops/reports/custodian \
-            governance/custodian/ebs-cleanup.yaml \
-            governance/custodian/unused-nlb.yaml \
+            --output-dir finops/reports/custodian/ecr \
             governance/custodian/ecr-image-cleanup.yaml
-        continue-on-error: true    # don't fail the whole report if custodian finds nothing
 
-      - name: Run Custodian — RDS off-hours (schedule only)
-        if: github.event_name == 'schedule'
+          echo "=== ECR cleanup results ==="
+          cat finops/reports/custodian/ecr/ecr-old-image-cleanup/resources.json \
+            2>/dev/null || echo "No resources affected"
+        continue-on-error: true
+
+      # ── EBS cleanup ───────────────────────────────────────────
+      - name: Run EBS volume cleanup
         run: |
+          echo "Running EBS unattached volume cleanup..."
           custodian run \
-            --output-dir finops/reports/custodian \
-            governance/custodian/rds-off-hours.yaml
+            --output-dir finops/reports/custodian/ebs \
+            governance/custodian/ebs-cleanup.yaml
+
+          echo "=== EBS cleanup results ==="
+          cat finops/reports/custodian/ebs/unused-ebs-cleanup/resources.json \
+            2>/dev/null || echo "No resources affected"
+        continue-on-error: true
+
+      # ── NLB cleanup ───────────────────────────────────────────
+      - name: Run unused NLB cleanup
+        run: |
+          echo "Running unused NLB cleanup..."
+          custodian run \
+            --output-dir finops/reports/custodian/nlb \
+            governance/custodian/unused-nlb.yaml
+
+          echo "=== NLB cleanup results ==="
+          cat finops/reports/custodian/nlb/unused-nlb-cleanup/resources.json \
+            2>/dev/null || echo "No resources affected"
         continue-on-error: true
 
       # ── Upload artifacts ──────────────────────────────────────
@@ -66,7 +87,7 @@ jobs:
             finops/reports/monthly.md
             finops/reports/custodian/
 
-      # ── Commit everything back to repo ────────────────────────
+      # ── Commit everything ─────────────────────────────────────
       - name: Commit reports to repo
         run: |
           git config user.name "github-actions[bot]"
