@@ -175,6 +175,10 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
           category: trivy-container
+      - name: Verify installed versions
+        run: |
+          docker run --rm --platform linux/arm64 game-service:scan-target \
+            pip show setuptools msgpack pip | grep -E "Name|Version"
 
       # ── Push only if scan passed ────────────────────────────────────────────
       - name: Build and Push ARM64 image (scan passed)
