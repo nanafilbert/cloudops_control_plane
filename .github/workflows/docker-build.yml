@@ -147,6 +147,8 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           timeout: 10m
+          skip-dirs: /usr/share/doc
+          scanners: vuln
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
@@ -169,6 +171,7 @@ jobs:
           vuln-type: os,library
           timeout: 10m
           skip-dirs: /usr/share/doc
+          scanners: vuln
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
