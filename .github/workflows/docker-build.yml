@@ -137,20 +137,23 @@ jobs:
           sbom: false
 
       # ── Trivy scan: print findings table to logs ────────────────────────────
-      - name: Scan image with Trivy (show findings in logs)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: game-service:scan-target
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: os,library
-          timeout: 10m
-          skip-dirs: /usr/share/doc
-          scanners: vuln
+      - name: Scan image with Trivy (direct CLI)
+        run: |
+          # Install Trivy directly
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+          # Run scan
+          trivy image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --vuln-type os,library \
+            --scanners vuln \
+            --skip-dirs /usr/share/doc \
+            --format table \
+            --exit-code 1 \
+            --db-repository ghcr.io/aquasecurity/trivy-db \
+            game-service:scan-target
         env:
-          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
       - name: Verify installed versions
         run: |
@@ -158,25 +161,7 @@ jobs:
             pip show setuptools msgpack pip | grep -E "Name|Version"
 
       # ── Trivy scan: SARIF upload to GitHub Security (blocks push on fail) ───
-      - name: Scan image with Trivy (SARIF gateway)
-        id: trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: game-service:scan-target
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: os,library
-          timeout: 10m
-          skip-dirs: /usr/share/doc
-          scanners: vuln
-        env:
-          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
-          TRIVY_SKIP_VERSION_CHECK: "true"
-          TRIVY_NO_PROGRESS: "false"
-
+      
       - name: Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
