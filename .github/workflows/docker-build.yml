@@ -145,7 +145,8 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '0'
           ignore-unfixed: true
-          pkg-types: os,library
+          vuln-type: os,library
+          scanners: vuln
           timeout: 10m
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
@@ -162,7 +163,8 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
-          pkg-types: os,library
+          vuln-type: os,library
+          scanners: vuln
           timeout: 10m
           skip-dirs: /usr/share/doc
         env:
