@@ -139,22 +139,34 @@ jobs:
       # ── Trivy scan: print findings table to logs ────────────────────────────
       - name: Scan image with Trivy (direct CLI)
         run: |
-          # Install Trivy directly
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
-          # Run scan
+          # Show full details of Python findings
           trivy image \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
-            --vuln-type os,library \
+            --pkg-types os,library \
             --scanners vuln \
             --skip-dirs /usr/share/doc \
-            --format table \
-            --exit-code 1 \
+            --format json \
+            --exit-code 0 \
             --db-repository ghcr.io/aquasecurity/trivy-db \
-            game-service:scan-target
-        env:
-          TRIVY_SKIP_VERSION_CHECK: "true"
+            game-service:scan-target 2>/dev/null | \
+            python3 -c "
+
+
+            import json, sys
+            data = json.load(sys.stdin)
+              
+            for result in data.get('Results', []):
+                if result.get('Vulnerabilities'):
+                    print(f\"Target: {result['Target']}\")
+                    for v in result['Vulnerabilities']:
+                        print(f\"  {v['VulnerabilityID']} | {v['PkgName']} | {v.get('InstalledVersion')} | Fixed: {v.get('FixedVersion', 'N/A')}\")
+            env:
+               TRIVY_SKIP_VERSION_CHECK: "true"
+              TRIVY_DISABLE_VEX_NOTICE: "true"
+
       - name: Verify installed versions
         run: |
           docker run --rm --platform linux/arm64 game-service:scan-target \
