@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           submodules: recursive
@@ -137,43 +137,38 @@ jobs:
           sbom: false
 
       # ── Trivy scan: print findings table to logs ────────────────────────────
-      - name: Scan image with Trivy (direct CLI)
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
-          # Show full details of Python findings
-          trivy image \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --pkg-types os,library \
-            --scanners vuln \
-            --skip-dirs /usr/share/doc \
-            --format json \
-            --exit-code 0 \
-            --db-repository ghcr.io/aquasecurity/trivy-db \
-            game-service:scan-target 2>/dev/null | \
-            python3 -c "
-
-
-            import json, sys
-            data = json.load(sys.stdin)
-              
-            for result in data.get('Results', []):
-                if result.get('Vulnerabilities'):
-                    print(f\"Target: {result['Target']}\")
-                    for v in result['Vulnerabilities']:
-                        print(f\"  {v['VulnerabilityID']} | {v['PkgName']} | {v.get('InstalledVersion')} | Fixed: {v.get('FixedVersion', 'N/A')}\")
-            env:
-               TRIVY_SKIP_VERSION_CHECK: "true"
-              TRIVY_DISABLE_VEX_NOTICE: "true"
-
-      - name: Verify installed versions
-        run: |
-          docker run --rm --platform linux/arm64 game-service:scan-target \
-            pip show setuptools msgpack pip | grep -E "Name|Version"
+      - name: Scan image with Trivy (show findings in logs)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: game-service:scan-target
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+          ignore-unfixed: true
+          pkg-types: os,library
+          timeout: 10m
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+          TRIVY_SKIP_VERSION_CHECK: "true"
 
       # ── Trivy scan: SARIF upload to GitHub Security (blocks push on fail) ───
-      
+      - name: Scan image with Trivy (SARIF gateway)
+        id: trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: game-service:scan-target
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+          pkg-types: os,library
+          timeout: 10m
+          skip-dirs: /usr/share/doc
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+          TRIVY_SKIP_VERSION_CHECK: "true"
+
       - name: Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
