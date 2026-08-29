@@ -163,4 +163,4 @@ jobs:
           infracost output \
             --path /tmp/infracost-total.json \
             --format table
-#.
+#..
