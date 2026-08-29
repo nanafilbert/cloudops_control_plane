@@ -147,6 +147,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           scanners: vuln
+          hide-progress: false
           timeout: 10m
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
