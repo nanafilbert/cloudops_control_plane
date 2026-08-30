@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           submodules: recursive
@@ -146,8 +146,6 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
           vuln-type: os,library
-          scanners: vuln
-          hide-progress: false
           timeout: 10m
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
@@ -165,7 +163,6 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: os,library
-          scanners: vuln
           timeout: 10m
           skip-dirs: /usr/share/doc
         env:
