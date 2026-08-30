@@ -132,7 +132,6 @@ jobs:
           push: false
           load: true
           tags: game-service:scan-target
-          #no-cache: true
           cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
           provenance: false
           sbom: false
@@ -159,6 +158,25 @@ jobs:
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
+          
+      - name: Inspect old package metadata inside image
+        run: |
+          docker run --rm \
+            --entrypoint sh \
+            game-service:scan-target \
+            -c '
+            echo "=== msgpack metadata ==="
+            find / -type f -path "*msgpack*" 2>/dev/null | head -100
+
+            echo ""
+            echo "=== setuptools metadata ==="
+            find / -type f -path "*setuptools*" 2>/dev/null | head -100
+
+            echo ""
+            echo "=== SBOM files ==="
+            find / -type f \( -iname "*sbom*" -o -iname "*bom*.json" -o -iname "*cyclonedx*" -o -iname "*spdx*" \) 2>/dev/null | head -100
+            '
+
 
       # ── Trivy scan: SARIF upload to GitHub Security (blocks push on fail) ───
       - name: Scan image with Trivy (SARIF gateway)
@@ -196,7 +214,6 @@ jobs:
             ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_URI }}:${{ env.SHORT_SHA }}
             ${{ env.IMAGE_URI }}:latest
-          #no-cache: true
           cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
           provenance: false
           sbom: false
