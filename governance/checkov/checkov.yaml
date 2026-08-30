@@ -1,7 +1,7 @@
-# governance/checkov/checkov.yml
-# Checkov configuration for Terraform and Kubernetes scanning
 
-# Skip checks that are not relevant for this demo
+
+
+
 skip-check:
   - CKV_AWS_18   # Ensure S3 bucket has logging enabled (demo bucket)
   - CKV_AWS_23   # Ensure EBS volumes are encrypted (demo RDS uses encryption)
