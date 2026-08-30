@@ -159,23 +159,38 @@ jobs:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
           
-      - name: Inspect old package metadata inside image
+      - name: Inspect SBOM contents for old vulnerable versions
         run: |
           docker run --rm \
-            --entrypoint sh \
+          --entrypoint sh \
+          game-service:scan-target \
+          -c '
+          echo "=== Searching SBOM files for msgpack ==="
+          grep -Rni "msgpack" \
+            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
+
+          echo ""
+          echo "=== Searching SBOM files for setuptools ==="
+          grep -Rni "setuptools" \
+            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
+
+          echo ""
+          echo "=== Searching specifically for version 1.1.2 ==="
+          grep -Rni "1.1.2" \
+            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
+
+          echo ""
+          echo "=== Searching specifically for version 70.3.0 ==="
+          grep -Rni "70.3.0" \
+            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
+          '
+
+      - name: Check all installed package metadata
+        run: |
+          docker run --rm \
+            --entrypoint python \
             game-service:scan-target \
-            -c '
-            echo "=== msgpack metadata ==="
-            find / -type f -path "*msgpack*" 2>/dev/null | head -100
-
-            echo ""
-            echo "=== setuptools metadata ==="
-            find / -type f -path "*setuptools*" 2>/dev/null | head -100
-
-            echo ""
-            echo "=== SBOM files ==="
-            find / -type f \( -iname "*sbom*" -o -iname "*bom*.json" -o -iname "*cyclonedx*" -o -iname "*spdx*" \) 2>/dev/null | head -100
-            '
+            -m pip list
 
 
       # ── Trivy scan: SARIF upload to GitHub Security (blocks push on fail) ───
