@@ -132,8 +132,8 @@ jobs:
           push: false
           load: true
           tags: game-service:scan-target
-          no-cache: true
-          #cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
+          #no-cache: true
+          cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
           provenance: false
           sbom: false
 
@@ -196,8 +196,8 @@ jobs:
             ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_URI }}:${{ env.SHORT_SHA }}
             ${{ env.IMAGE_URI }}:latest
-          no-cache: true
-          #cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
+          #no-cache: true
+          cache-from: type=registry,ref=${{ env.IMAGE_URI }}:buildcache
           provenance: false
           sbom: false
 
