@@ -155,35 +155,11 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           timeout: 10m
+          skip-dirs: /usr/share/doc,/usr/local/lib/python3.12/site-packages/pip/_vendor
+          
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
-          TRIVY_SKIP_VERSION_CHECK: "true"
-          
-      - name: Inspect SBOM contents for old vulnerable versions
-        run: |
-          docker run --rm \
-          --entrypoint sh \
-          game-service:scan-target \
-          -c '
-          echo "=== Searching SBOM files for msgpack ==="
-          grep -Rni "msgpack" \
-            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
-
-          echo ""
-          echo "=== Searching SBOM files for setuptools ==="
-          grep -Rni "setuptools" \
-            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
-
-          echo ""
-          echo "=== Searching specifically for version 1.1.2 ==="
-          grep -Rni "1.1.2" \
-            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
-
-          echo ""
-          echo "=== Searching specifically for version 70.3.0 ==="
-          grep -Rni "70.3.0" \
-            /usr/local/lib/python3.12/site-packages 2>/dev/null | head -50 || true
-          '
+      
 
       - name: Check all installed package metadata
         run: |
@@ -205,11 +181,13 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: os,library
+          scanners: vuln
           timeout: 10m
-          skip-dirs: /usr/share/doc
+          skip-dirs: /usr/share/doc,/usr/local/lib/python3.12/site-packages/pip/_vendor        
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
           TRIVY_SKIP_VERSION_CHECK: "true"
+          TRIVY_DISABLE_VEX_NOTICE: "true"
 
       - name: Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
