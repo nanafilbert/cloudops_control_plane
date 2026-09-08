@@ -303,3 +303,5 @@ jobs:
             -n monitoring -c prometheus --tail=50 || true
           echo "=== loki logs ==="
           kubectl logs -n logging -l app.kubernetes.io/name=loki --tail=50 || true
+
+  #
