@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: 234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service
+  repository: 261175719079.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service
   tag: latest
   pullPolicy: Always
 

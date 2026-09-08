@@ -222,7 +222,7 @@ jobs:
             --namespace game-dev \
             --create-namespace \
             --values configs/dev/values-game-service.yaml \
-            --set image.repository=234506497205.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service \
+            --set image.repository=261175719079.dkr.ecr.us-east-1.amazonaws.com/cloudops-dev-game-service \
             --set image.tag=${{ env.IMAGE_TAG }} \
             --atomic \
             --timeout 5m \
